@@ -1,0 +1,3880 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07080c">
+  <title>Zenith Project — Ferrari 812 GTS</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+  <style>
+  body.intro-active .topbar,
+  body.intro-active .watermark,
+  body.intro-active .modelCredit,
+  body.intro-active .viewDock,
+  body.intro-active .floatingTools,
+  body.intro-active .status,
+  body.intro-active .morePanel {
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(10px);
+  }
+
+  :root {
+    --bg:#07080c;
+    --bg2:#11141b;
+    --card:rgba(18,22,30,.34);
+    --btn:rgba(255,255,255,.045);
+    --btnHover:rgba(255,255,255,.125);
+    --stroke:rgba(255,255,255,.16);
+    --strokeStrong:rgba(255,255,255,.30);
+    --text:#f6f7f9;
+    --muted:rgba(246,247,249,.67);
+    --accent:rgba(255,255,255,.82);
+    --accentDark:#07080c;
+    --shadow:rgba(0,0,0,.34);
+    --glassBlur:28px;
+    --safeTop:max(12px, env(safe-area-inset-top));
+    --safeBottom:max(14px, env(safe-area-inset-bottom));
+  }
+
+  body.light {
+    --bg:#edf1f6;
+    --bg2:#dce3ec;
+    --card:rgba(255,255,255,.36);
+    --btn:rgba(255,255,255,.26);
+    --btnHover:rgba(255,255,255,.52);
+    --stroke:rgba(255,255,255,.34);
+    --strokeStrong:rgba(255,255,255,.58);
+    --text:#11151b;
+    --muted:rgba(17,21,27,.68);
+    --accent:rgba(17,21,27,.86);
+    --accentDark:#ffffff;
+    --shadow:rgba(18,24,35,.10);
+    --glassBlur:28px;
+  }
+
+  * {
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  html,
+  body {
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+
+  #app {
+    position:relative;
+    width:100%;
+    height:100dvh;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 50% -15%, rgba(255,255,255,.10), transparent 28%),
+      radial-gradient(circle at 12% 88%, rgba(203,37,45,.12), transparent 30%),
+      linear-gradient(180deg,var(--bg2),var(--bg));
+  }
+
+  #viewer {
+    position:absolute;
+    inset:0;
+  }
+
+  #viewer canvas {
+    display:block;
+    width:100%;
+    height:100%;
+  }
+
+  .glass {
+    background:var(--card);
+    border:1px solid var(--stroke);
+    box-shadow:
+      0 18px 50px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,.16),
+      inset 0 -1px 0 rgba(255,255,255,.045);
+    backdrop-filter:blur(var(--glassBlur)) saturate(185%);
+    -webkit-backdrop-filter:blur(var(--glassBlur)) saturate(185%);
+  }
+
+  .topbar {
+    position:absolute;
+    z-index:15;
+    top:var(--safeTop);
+    left:12px;
+    right:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    pointer-events:none;
+    transition:opacity .28s ease, transform .28s ease;
+  }
+
+  .hero {
+    pointer-events:auto;
+    width:min(72vw,420px);
+    padding:18px;
+    border-radius:28px;
+    background:var(--card);
+    border:1px solid var(--stroke);
+    box-shadow:
+      0 18px 50px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,.16),
+      inset 0 -1px 0 rgba(255,255,255,.045);
+    backdrop-filter:blur(var(--glassBlur)) saturate(185%);
+    -webkit-backdrop-filter:blur(var(--glassBlur)) saturate(185%);
+  }
+
+  .heroBrandRow {
+    display:flex;
+    align-items:flex-start;
+    gap:13px;
+  }
+
+  .brandMark {
+    flex:0 0 auto;
+    width:54px;
+    height:64px;
+    border-radius:18px 18px 24px 24px;
+    position:relative;
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    color:#fff;
+    background:
+      radial-gradient(circle at 35% 18%, rgba(255,255,255,.85), rgba(255,255,255,0) 22%),
+      linear-gradient(145deg, rgba(255,214,74,.94), rgba(203,37,45,.88) 48%, rgba(18,22,30,.72));
+    border:1px solid rgba(255,255,255,.26);
+    box-shadow:
+      0 18px 40px rgba(0,0,0,.25),
+      inset 0 1px 0 rgba(255,255,255,.36),
+      inset 0 -1px 0 rgba(0,0,0,.20);
+    transform:translateY(1px);
+  }
+
+  .brandMark::before {
+    content:"";
+    position:absolute;
+    inset:6px;
+    border-radius:14px 14px 19px 19px;
+    border:1px solid rgba(255,255,255,.30);
+  }
+
+  .brandMark::after {
+    content:"Z";
+    position:relative;
+    z-index:2;
+    font-size:30px;
+    line-height:1;
+    font-weight:1000;
+    letter-spacing:-.08em;
+    text-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .brandMarkLine {
+    position:absolute;
+    left:12px;
+    right:12px;
+    bottom:10px;
+    height:3px;
+    border-radius:999px;
+    background:rgba(255,255,255,.82);
+    box-shadow:0 0 14px rgba(255,255,255,.42);
+  }
+
+  .heroText {
+    min-width:0;
+  }
+
+  .eyebrow {
+    font-size:11px;
+    font-weight:950;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  .title {
+    margin-top:4px;
+    font-size:clamp(30px,6vw,48px);
+    line-height:.96;
+    font-weight:950;
+    letter-spacing:-.065em;
+  }
+
+  .lead {
+    margin-top:9px;
+    font-size:13px;
+    line-height:1.48;
+    color:var(--muted);
+    font-weight:750;
+  }
+
+  .miniStats {
+    margin-top:12px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .miniStat {
+    padding:8px 10px;
+    border-radius:16px;
+    font-size:11px;
+    font-weight:950;
+    background:rgba(255,255,255,.055);
+    border:1px solid var(--stroke);
+    backdrop-filter:blur(18px) saturate(170%);
+    -webkit-backdrop-filter:blur(18px) saturate(170%);
+  }
+
+  .topControls {
+    pointer-events:auto;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+
+  .ctrlBtn,
+  .toolBtn,
+  .pillBtn,
+  .sheetTab,
+  .moreBtn,
+  .closeBtn {
+    appearance:none;
+    border:1px solid var(--stroke);
+    cursor:pointer;
+    color:var(--text);
+    background:var(--btn);
+    font-family:inherit;
+    font-weight:950;
+    box-shadow:
+      0 10px 26px rgba(0,0,0,.16),
+      inset 0 1px 0 rgba(255,255,255,.14),
+      inset 0 -1px 0 rgba(255,255,255,.035);
+    backdrop-filter:blur(22px) saturate(180%);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    transition:
+      transform .22s cubic-bezier(.2,.8,.2,1),
+      background .22s ease,
+      border-color .22s ease,
+      box-shadow .22s ease,
+      opacity .22s ease;
+    touch-action:manipulation;
+  }
+
+  .ctrlBtn {
+    min-width:64px;
+    height:64px;
+    padding:0 16px;
+    border-radius:22px;
+    font-size:14px;
+  }
+
+  .ctrlBtn.icon {
+    width:64px;
+    min-width:64px;
+    padding:0;
+  }
+
+  .ctrlBtn:hover,
+  .toolBtn:hover,
+  .pillBtn:hover,
+  .sheetTab:hover,
+  .moreBtn:hover,
+  .closeBtn:hover {
+    background:var(--btnHover);
+    border-color:var(--strokeStrong);
+    transform:translateY(-1px);
+  }
+
+  .ctrlBtn:active,
+  .toolBtn:active,
+  .pillBtn:active,
+  .sheetTab:active,
+  .moreBtn:active,
+  .closeBtn:active {
+    transform:scale(.95);
+    background:rgba(255,255,255,.16);
+  }
+
+  .ctrlBtn.active,
+  .toolBtn.active,
+  .pillBtn.active,
+  .sheetTab.active,
+  .moreBtn.active {
+    background:rgba(255,255,255,.26);
+    border-color:rgba(255,255,255,.46);
+    color:var(--text);
+    box-shadow:
+      0 14px 34px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,.30),
+      inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+
+  body.light .ctrlBtn.active,
+  body.light .toolBtn.active,
+  body.light .pillBtn.active,
+  body.light .sheetTab.active,
+  body.light .moreBtn.active {
+    background:rgba(17,21,27,.16);
+    color:var(--text);
+    border-color:rgba(17,21,27,.18);
+  }
+
+  .rotateIcon {
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .rotateIcon::before {
+    content:"";
+    width:38px;
+    height:18px;
+    border:3px solid currentColor;
+    border-right-color:transparent;
+    border-radius:50%;
+    transform:rotate(-6deg);
+  }
+
+  .rotateIcon::after {
+    content:"";
+    position:absolute;
+    right:15px;
+    top:24px;
+    width:0;
+    height:0;
+    border-left:9px solid currentColor;
+    border-top:6px solid transparent;
+    border-bottom:6px solid transparent;
+    transform:rotate(-6deg);
+  }
+
+  .ctrlBtn.themeSwitch {
+    width:116px;
+    min-width:116px;
+    padding:5px;
+    border-radius:999px;
+  }
+
+  .themeTrack {
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    height:54px;
+    padding:0 18px;
+    border-radius:999px;
+    background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.035));
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.18),
+      inset 0 -1px 0 rgba(0,0,0,.14);
+    overflow:hidden;
+  }
+
+  .themeIcon {
+    position:relative;
+    z-index:2;
+    width:24px;
+    text-align:center;
+    font-size:18px;
+    line-height:1;
+    transition:opacity .28s ease, transform .28s ease;
+  }
+
+  .themeIcon.moon { opacity:1; transform:scale(1); }
+  .themeIcon.sun { opacity:.42; transform:scale(.92); }
+
+  .themeThumb {
+    position:absolute;
+    top:5px;
+    left:5px;
+    width:44px;
+    height:44px;
+    border-radius:999px;
+    background:rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.24);
+    box-shadow:
+      0 10px 24px rgba(0,0,0,.20),
+      inset 0 1px 0 rgba(255,255,255,.26);
+    backdrop-filter:blur(20px) saturate(185%);
+    -webkit-backdrop-filter:blur(20px) saturate(185%);
+    transition:transform .35s cubic-bezier(.2,.8,.2,1), background .35s ease;
+  }
+
+  #themeBtn.active .themeThumb { transform:translateX(57px); background:rgba(255,255,255,.28); }
+  #themeBtn.active .themeIcon.moon { opacity:.42; transform:scale(.92); }
+  #themeBtn.active .themeIcon.sun { opacity:1; transform:scale(1); }
+
+
+  .moreIcon {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:100%;
+    font-size:28px;
+    letter-spacing:1px;
+    line-height:1;
+    transform:translateY(-2px);
+  }
+
+  .morePanel {
+    position:absolute;
+    z-index:25;
+    top:calc(var(--safeTop) + 78px);
+    right:12px;
+    width:min(310px, calc(100vw - 24px));
+    padding:12px;
+    border-radius:28px;
+    display:grid;
+    gap:8px;
+    pointer-events:none;
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(-8px) scale(.98);
+    transition:opacity .22s ease, transform .22s ease, visibility .22s ease;
+  }
+
+  .morePanel.open {
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transform:translateY(0) scale(1);
+  }
+
+  .morePanelTitle {
+    padding:4px 6px 6px;
+    font-size:11px;
+    font-weight:950;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  .moreBtn {
+    width:100%;
+    min-height:54px;
+    padding:10px 12px;
+    border-radius:18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    text-align:left;
+    font-size:13px;
+    white-space:normal;
+  }
+
+  .moreBtn span:first-child {
+    font-weight:950;
+  }
+
+  .moreBtn span:last-child {
+    font-size:11px;
+    color:var(--muted);
+    font-weight:850;
+    text-align:right;
+  }
+  .viewDock {
+    position:absolute;
+    z-index:12;
+    left:12px;
+    right:12px;
+    bottom:calc(var(--safeBottom) + 18px);
+    max-width:760px;
+    margin:0 auto;
+    padding:9px;
+    border-radius:28px;
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    pointer-events:auto;
+    background:var(--card);
+    border:1px solid var(--stroke);
+    box-shadow:
+      0 18px 52px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,.16),
+      inset 0 -1px 0 rgba(255,255,255,.04);
+    backdrop-filter:blur(var(--glassBlur)) saturate(185%);
+    -webkit-backdrop-filter:blur(var(--glassBlur)) saturate(185%);
+    transition:opacity .28s ease, transform .28s ease;
+  }
+
+  .viewDock::-webkit-scrollbar {
+    display:none;
+  }
+
+  .pillBtn {
+    flex:0 0 auto;
+    min-width:96px;
+    min-height:52px;
+    border-radius:999px;
+    padding:0 18px;
+    font-size:14px;
+    letter-spacing:.01em;
+  }
+
+  .status {
+    position:absolute;
+    z-index:11;
+    left:50%;
+    bottom:calc(var(--safeBottom) + 90px);
+    transform:translateX(-50%);
+    width:min(520px, calc(100vw - 24px));
+    pointer-events:none;
+    text-align:center;
+    padding:10px 14px;
+    border-radius:999px;
+    background:rgba(18,22,30,.26);
+    border:1px solid rgba(255,255,255,.12);
+    font-size:12px;
+    font-weight:800;
+    color:var(--muted);
+    backdrop-filter:blur(20px) saturate(175%);
+    -webkit-backdrop-filter:blur(20px) saturate(175%);
+  }
+
+  body.light .status {
+    background:rgba(255,255,255,.28);
+    border-color:rgba(255,255,255,.32);
+  }
+
+  #showDockBtn {
+    position:absolute;
+    z-index:13;
+    left:12px;
+    bottom:calc(var(--safeBottom) + 18px);
+    display:none;
+  }
+
+  #showDockBtn button {
+    min-height:54px;
+    padding:0 20px;
+    border-radius:999px;
+    background:var(--card);
+    border:1px solid var(--stroke);
+    color:var(--text);
+    box-shadow:
+      0 16px 40px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,.14);
+    font-weight:950;
+    backdrop-filter:blur(22px) saturate(180%);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+  }
+
+  body.ui-hidden .topbar,
+  body.ui-hidden .floatingTools,
+  body.ui-hidden .viewDock,
+  body.ui-hidden .watermark,
+  body.ui-hidden .modelCredit,
+  body.ui-hidden .status {
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(10px);
+  }
+
+  body.ui-hidden #showDockBtn {
+    display:block;
+  }
+
+  .watermark {
+    position:absolute;
+    z-index:11;
+    right:18px;
+    bottom:max(12px, calc(env(safe-area-inset-bottom) + 6px));
+    pointer-events:none;
+    font-size:11px;
+    font-weight:850;
+    line-height:1.45;
+    letter-spacing:.06em;
+    color:rgba(245,246,248,.66);
+    opacity:.82;
+    text-shadow:0 2px 10px rgba(0,0,0,.38);
+    text-align:right;
+  }
+
+  .modelCredit {
+    position:absolute;
+    z-index:11;
+    left:18px;
+    bottom:max(12px, calc(env(safe-area-inset-bottom) + 6px));
+    pointer-events:none;
+    font-size:11px;
+    font-weight:850;
+    line-height:1.45;
+    letter-spacing:.06em;
+    color:rgba(245,246,248,.66);
+    opacity:.82;
+    text-shadow:0 2px 10px rgba(0,0,0,.38);
+    text-align:left;
+  }
+
+  body.light .watermark,
+  body.light .modelCredit {
+    color:rgba(17,21,27,.55);
+    text-shadow:none;
+  }
+
+  .modalWrap {
+    position:absolute;
+    inset:0;
+    z-index:20;
+    background:rgba(4,6,10,.46);
+    display:none;
+    place-items:center;
+    padding:22px;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+  }
+
+  .bottomSheetWrap {
+    align-items:end;
+    place-items:end center;
+    padding:12px;
+  }
+
+  .modal {
+    width:min(920px,100%);
+    max-height:min(82dvh,900px);
+    overflow:auto;
+    background:var(--card);
+    border:1px solid var(--stroke);
+    border-radius:28px;
+    box-shadow:
+      0 28px 80px rgba(0,0,0,.34),
+      inset 0 1px 0 rgba(255,255,255,.15);
+    padding:18px;
+    backdrop-filter:blur(30px) saturate(185%);
+    -webkit-backdrop-filter:blur(30px) saturate(185%);
+  }
+
+  .bottomSheet {
+    width:min(720px,100%);
+    max-height:min(76dvh,720px);
+    overflow:auto;
+    border-radius:30px 30px 24px 24px;
+    padding:10px 14px 16px;
+  }
+
+  .sheetHandle {
+    width:46px;
+    height:5px;
+    border-radius:999px;
+    background:rgba(255,255,255,.24);
+    margin:0 auto 12px;
+  }
+
+  body.light .sheetHandle {
+    background:rgba(17,21,27,.20);
+  }
+
+  .modalHeader {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .modalTitle {
+    font-size:24px;
+    font-weight:950;
+    letter-spacing:-.04em;
+  }
+
+  .closeBtn {
+    width:44px;
+    height:44px;
+    border-radius:16px;
+    font-size:20px;
+  }
+
+  .sheetTabs {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+    margin-bottom:12px;
+  }
+
+  .sheetTab {
+    min-height:46px;
+    border-radius:999px;
+    font-size:13px;
+    padding:0 10px;
+    white-space:nowrap;
+  }
+
+  .sheetPane {
+    display:none;
+  }
+
+  .sheetPane.active {
+    display:block;
+  }
+
+  .overviewHero {
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    align-items:center;
+    padding:16px;
+    border-radius:24px;
+    border:1px solid var(--stroke);
+    background:linear-gradient(135deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+    margin-bottom:12px;
+  }
+
+  .overviewKicker {
+    font-size:11px;
+    font-weight:950;
+    letter-spacing:.13em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  .overviewTitle {
+    margin-top:4px;
+    font-size:28px;
+    line-height:1;
+    font-weight:950;
+    letter-spacing:-.045em;
+  }
+
+  .overviewText {
+    margin-top:8px;
+    font-size:13px;
+    line-height:1.45;
+    color:var(--muted);
+    font-weight:720;
+  }
+
+  .overviewBadge {
+    width:72px;
+    height:72px;
+    border-radius:24px;
+    display:grid;
+    place-items:center;
+    border:1px solid var(--strokeStrong);
+    background:rgba(203,37,45,.16);
+    font-size:20px;
+    font-weight:950;
+    letter-spacing:-.03em;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+  }
+
+  .detailMetricGrid,
+  .detailStoryGrid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+
+  .detailMetric,
+  .detailStory {
+    padding:14px;
+    border-radius:22px;
+    background:rgba(255,255,255,.045);
+    border:1px solid var(--stroke);
+    backdrop-filter:blur(18px) saturate(170%);
+    -webkit-backdrop-filter:blur(18px) saturate(170%);
+  }
+
+  .detailMetric .k,
+  .detailStory .k {
+    font-size:11px;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:950;
+  }
+
+  .detailMetric .v {
+    margin-top:7px;
+    font-size:24px;
+    line-height:1;
+    font-weight:950;
+    letter-spacing:-.035em;
+  }
+
+  .detailMetric .s,
+  .detailStory .s {
+    margin-top:8px;
+    font-size:12.5px;
+    line-height:1.42;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .detailStory .v {
+    margin-top:5px;
+    font-size:18px;
+    line-height:1.08;
+    font-weight:950;
+    letter-spacing:-.03em;
+  }
+
+  .cards {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+  }
+
+  .card {
+    padding:14px;
+    border-radius:22px;
+    background:rgba(255,255,255,.045);
+    border:1px solid var(--stroke);
+    backdrop-filter:blur(18px) saturate(170%);
+    -webkit-backdrop-filter:blur(18px) saturate(170%);
+  }
+
+  .card .k {
+    font-size:11px;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:950;
+  }
+
+  .card .v {
+    margin-top:6px;
+    font-size:22px;
+    line-height:1;
+    font-weight:950;
+  }
+
+  .card .s {
+    margin-top:8px;
+    font-size:12px;
+    line-height:1.4;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .note {
+    font-size:12px;
+    line-height:1.45;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .infoModalBody {
+    display:grid;
+    grid-template-columns:.85fr 1.15fr;
+    gap:14px;
+  }
+
+  .infoVisual {
+    border-radius:26px;
+    border:1px solid var(--stroke);
+    background:linear-gradient(180deg,rgba(203,37,45,.12),rgba(255,255,255,.035));
+    padding:18px;
+    min-height:320px;
+    display:grid;
+    align-content:center;
+    backdrop-filter:blur(18px) saturate(170%);
+    -webkit-backdrop-filter:blur(18px) saturate(170%);
+  }
+
+  .infoCarSymbol {
+    position:relative;
+    width:min(290px,100%);
+    height:128px;
+    margin:0 auto 18px;
+  }
+
+  .ferrariSketch {
+    width:min(340px,100%);
+    height:150px;
+    display:grid;
+    place-items:center;
+    filter:drop-shadow(0 16px 28px rgba(0,0,0,.26));
+  }
+
+  .ferrariSketch svg {
+    width:100%;
+    height:100%;
+    overflow:visible;
+  }
+
+  .sketchLine {
+    fill:none;
+    stroke:rgba(255,255,255,.78);
+    stroke-width:5;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .sketchLine.main {
+    stroke:url(#sketchRed);
+    stroke-width:6.5;
+    fill:rgba(203,37,45,.055);
+  }
+
+  .sketchLine.roof {
+    stroke:rgba(255,255,255,.72);
+    stroke-width:4.5;
+    fill:rgba(255,255,255,.035);
+  }
+
+  .sketchLine.detail {
+    stroke:rgba(255,255,255,.46);
+    stroke-width:3.2;
+  }
+
+  .sketchLine.accent {
+    stroke:rgba(203,37,45,.72);
+    stroke-width:4;
+  }
+
+  .sketchLine.fine {
+    stroke:rgba(255,255,255,.32);
+    stroke-width:2.4;
+  }
+
+  .sketchWheel {
+    fill:rgba(7,8,12,.40);
+    stroke:rgba(255,255,255,.78);
+    stroke-width:5;
+  }
+
+  .sketchHub {
+    fill:rgba(203,37,45,.18);
+    stroke:rgba(255,255,255,.48);
+    stroke-width:3;
+  }
+
+  .infoCarBody {
+    position:absolute;
+    left:18px;
+    right:18px;
+    bottom:30px;
+    height:42px;
+    border-radius:36px 54px 24px 24px;
+    border:3px solid currentColor;
+    opacity:.86;
+  }
+
+  .infoCarRoof {
+    position:absolute;
+    left:78px;
+    right:78px;
+    bottom:68px;
+    height:42px;
+    border:3px solid currentColor;
+    border-bottom:0;
+    border-radius:42px 42px 0 0;
+    opacity:.86;
+  }
+
+  .infoWheel {
+    position:absolute;
+    bottom:16px;
+    width:34px;
+    height:34px;
+    border:5px solid currentColor;
+    border-radius:50%;
+    opacity:.86;
+  }
+
+  .infoWheel.left {
+    left:62px;
+  }
+
+  .infoWheel.right {
+    right:62px;
+  }
+
+  .infoVisualTitle {
+    font-size:30px;
+    font-weight:950;
+    letter-spacing:-.04em;
+    text-align:center;
+  }
+
+  .infoVisualText {
+    margin-top:10px;
+    font-size:14px;
+    line-height:1.5;
+    color:var(--muted);
+    font-weight:760;
+    text-align:center;
+  }
+
+  .infoFactList {
+    display:grid;
+    gap:10px;
+    max-height:min(48dvh,520px);
+    overflow:auto;
+    padding-right:4px;
+  }
+
+  .infoFactCard {
+    display:grid;
+    grid-template-columns:54px 1fr;
+    gap:12px;
+    padding:14px;
+    border-radius:22px;
+    border:1px solid var(--stroke);
+    background:rgba(255,255,255,.045);
+    backdrop-filter:blur(18px) saturate(170%);
+    -webkit-backdrop-filter:blur(18px) saturate(170%);
+  }
+
+  .infoFactIcon {
+    width:54px;
+    height:54px;
+    border-radius:18px;
+    display:grid;
+    place-items:center;
+    border:1px solid var(--stroke);
+    background:rgba(203,37,45,.13);
+  }
+
+  .infoFactIcon svg {
+    width:30px;
+    height:30px;
+    stroke:currentColor;
+    fill:none;
+    stroke-width:2.5;
+  }
+
+  .infoFactKicker {
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:950;
+  }
+
+  .infoFactTitle {
+    margin-top:2px;
+    font-size:18px;
+    line-height:1.08;
+    font-weight:950;
+    letter-spacing:-.03em;
+  }
+
+  .infoFactText {
+    margin-top:7px;
+    font-size:13px;
+    line-height:1.45;
+    color:var(--muted);
+    font-weight:720;
+  }
+
+  .loading,
+  .error {
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    z-index:30;
+    background:radial-gradient(circle at center, rgba(31,36,46,.54), rgba(4,5,8,.95));
+  }
+
+  .loadingCard,
+  .errorCard {
+    width:min(380px,92vw);
+    border-radius:28px;
+    background:var(--card);
+    border:1px solid var(--stroke);
+    box-shadow:0 22px 64px rgba(0,0,0,.38);
+    padding:24px;
+    text-align:center;
+    backdrop-filter:blur(26px) saturate(180%);
+    -webkit-backdrop-filter:blur(26px) saturate(180%);
+  }
+
+  .spinner {
+    width:42px;
+    height:42px;
+    border:3px solid rgba(255,255,255,.15);
+    border-top-color:rgba(255,255,255,.88);
+    border-radius:50%;
+    margin:0 auto 14px;
+    animation:spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform:rotate(360deg);
+    }
+  }
+
+  .hidden {
+    display:none !important;
+  }
+
+  @media (max-width:920px) {
+    .cards {
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .infoModalBody {
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width:640px) {
+    .topbar {
+      left:10px;
+      right:10px;
+      top:calc(max(8px, env(safe-area-inset-top)) + 18px);
+      gap:8px;
+      align-items:flex-start;
+    }
+
+    .hero {
+      width:auto;
+      min-width:118px;
+      max-width:38vw;
+      padding:9px 11px;
+      border-radius:20px;
+    }
+
+    .eyebrow {
+      font-size:8px;
+      letter-spacing:.12em;
+    }
+
+    .title {
+      margin-top:2px;
+      font-size:16px;
+      line-height:1;
+      letter-spacing:-.04em;
+    }
+
+    .lead,
+    .miniStats {
+      display:none;
+    }
+
+    .topControls {
+      gap:7px;
+    }
+
+    .ctrlBtn,
+    .ctrlBtn.icon {
+      width:52px;
+      min-width:52px;
+      height:52px;
+      border-radius:18px;
+      padding:0;
+      font-size:13px;
+    }
+
+    .rotateIcon::before {
+      width:30px;
+      height:15px;
+      border-width:2.5px;
+    }
+
+    .rotateIcon::after {
+      right:12px;
+      top:20px;
+      border-left-width:8px;
+      border-top-width:5px;
+      border-bottom-width:5px;
+    }
+
+    .ctrlBtn.themeSwitch {
+      width:82px;
+      min-width:82px;
+      padding:4px;
+      border-radius:999px;
+    }
+
+    .themeTrack {
+      height:44px;
+      padding:0 12px;
+    }
+
+    .themeIcon {
+      font-size:16px;
+    }
+
+    .themeThumb {
+      width:36px;
+      height:36px;
+    }
+
+    #themeBtn.active .themeThumb {
+      transform:translateX(36px);
+    }
+
+    .morePanel {
+      top:calc(var(--safeTop) + 60px);
+      right:10px;
+      width:min(260px, calc(100vw - 20px));
+      border-radius:24px;
+    }
+
+    .floatingTools {
+      left:10px;
+      right:10px;
+      bottom:calc(var(--safeBottom) + 144px);
+    }
+
+    .toolBtn {
+      min-height:48px;
+      min-width:72px;
+      padding:0 13px;
+      border-radius:999px;
+      font-size:12px;
+    }
+
+    .toolBtn.details {
+      min-width:86px;
+    }
+
+    .viewDock {
+      left:10px;
+      right:10px;
+      bottom:calc(var(--safeBottom) + 62px);
+      padding:8px;
+      border-radius:26px;
+      max-width:none;
+    }
+
+    .pillBtn {
+      min-width:88px;
+      min-height:50px;
+      padding:0 16px;
+      font-size:13px;
+    }
+
+    .status {
+      display:none;
+    }
+
+    .cards,
+    .detailMetricGrid,
+    .detailStoryGrid {
+      grid-template-columns:1fr;
+    }
+
+    .overviewHero {
+      grid-template-columns:1fr;
+      padding:14px;
+    }
+
+    .overviewBadge {
+      width:100%;
+      height:48px;
+      border-radius:18px;
+    }
+
+    .sheetTabs {
+      overflow-x:auto;
+      display:flex;
+      gap:8px;
+      scrollbar-width:none;
+      padding-bottom:2px;
+    }
+
+    .sheetTabs::-webkit-scrollbar {
+      display:none;
+    }
+
+    .sheetTab {
+      flex:0 0 auto;
+      min-width:92px;
+      min-height:44px;
+      font-size:12px;
+    }
+
+    .modalWrap {
+      padding:12px;
+    }
+
+    .bottomSheetWrap {
+      padding:10px;
+    }
+
+    .bottomSheet {
+      max-height:72dvh;
+      border-radius:28px 28px 22px 22px;
+    }
+
+    .modalTitle {
+      font-size:22px;
+    }
+
+    .infoVisual {
+      min-height:240px;
+    }
+
+    .watermark {
+      right:12px;
+      left:auto;
+      text-align:right;
+      font-size:10px;
+      max-width:48vw;
+    }
+
+    .modelCredit {
+      left:12px;
+      right:auto;
+      text-align:left;
+      font-size:10px;
+      max-width:48vw;
+    }
+  }
+
+  .hotspotLayer {
+    display:none !important;
+    position:absolute;
+    z-index:9;
+    right:clamp(18px, 3vw, 38px);
+    top:clamp(260px, 34vh, 390px);
+    width:min(390px, 34vw);
+    display:block;
+    pointer-events:none;
+    opacity:1;
+    transition:opacity .28s ease;
+  }
+
+  .hotspotInfo {
+    position:absolute;
+    inset:0 auto auto 0;
+    width:100%;
+    padding:16px 17px 17px;
+    border-radius:24px;
+    background:rgba(18,22,30,.44);
+    border:1px solid rgba(255,255,255,.18);
+    color:var(--text);
+    box-shadow:
+      0 24px 70px rgba(0,0,0,.34),
+      inset 0 1px 0 rgba(255,255,255,.18),
+      inset 0 -1px 0 rgba(255,255,255,.04);
+    backdrop-filter:blur(34px) saturate(190%);
+    -webkit-backdrop-filter:blur(34px) saturate(190%);
+    opacity:0;
+    visibility:hidden;
+    overflow:hidden;
+    filter:blur(10px) saturate(.65);
+    transform:translateY(12px) scale(.96);
+    transition:
+      opacity .34s ease,
+      visibility .34s ease,
+      transform .34s cubic-bezier(.2,.8,.2,1),
+      filter .34s ease,
+      background .34s ease,
+      border-color .34s ease;
+    will-change:transform, opacity, filter;
+  }
+
+  .hotspotInfo.visible,
+  .hotspotInfo.featured {
+    opacity:1;
+    visibility:visible;
+    filter:blur(0) saturate(1);
+    transform:translateY(0) scale(1);
+  }
+
+  .hotspotInfo.dimmed {
+    opacity:0;
+    visibility:hidden;
+  }
+
+  .hotspotInfo::before {
+    content:"";
+    position:absolute;
+    left:0;
+    top:14px;
+    bottom:14px;
+    width:3px;
+    border-radius:999px;
+    background:rgba(255,255,255,.66);
+    box-shadow:0 0 30px rgba(255,255,255,.40);
+  }
+
+  .hotspotKicker {
+    font-size:10px;
+    line-height:1;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    color:rgba(246,247,249,.72);
+    font-weight:950;
+    margin-bottom:8px;
+  }
+
+  .hotspotTitle {
+    font-size:20px;
+    line-height:1.06;
+    font-weight:950;
+    letter-spacing:-.038em;
+  }
+
+  .hotspotText {
+    margin-top:9px;
+    font-size:13px;
+    line-height:1.46;
+    color:rgba(246,247,249,.72);
+    font-weight:730;
+  }
+
+  body.light .hotspotInfo {
+    background:rgba(255,255,255,.62);
+    border-color:rgba(17,21,27,.14);
+    box-shadow:0 24px 70px rgba(18,24,35,.14), inset 0 1px 0 rgba(255,255,255,.48);
+  }
+
+  body.light .hotspotKicker,
+  body.light .hotspotText {
+    color:rgba(17,21,27,.66);
+  }
+
+  body.intro-active .hotspotLayer,
+  body.ui-hidden .hotspotLayer {
+    opacity:0;
+    pointer-events:none;
+  }
+
+  @media (max-width:920px) {
+    .hotspotLayer {
+    display:none !important;
+      right:16px;
+      top:clamp(225px, 32vh, 340px);
+      width:min(350px, 42vw);
+    }
+  }
+
+  @media (max-width:640px) {
+    .hotspotLayer {
+    display:none !important;
+      left:12px;
+      right:12px;
+      top:auto;
+      bottom:max(178px, calc(env(safe-area-inset-bottom) + 168px));
+      width:auto;
+    }
+
+    .hotspotInfo {
+      padding:13px 14px 14px;
+      border-radius:21px;
+    }
+
+    .hotspotTitle {
+      font-size:17px;
+    }
+
+    .hotspotText {
+      font-size:12px;
+    }
+  }
+
+  /* S6 adaptive layout: one script, responsive UI for phone, tablet, desktop and landscape. */
+  body.compact-ui .hero {
+    width:min(56vw, 340px);
+    padding:14px;
+    border-radius:24px;
+  }
+
+  body.compact-ui .lead,
+  body.compact-ui .miniStats {
+    display:none;
+  }
+
+  body.compact-ui .title {
+    font-size:clamp(28px, 5.2vw, 40px);
+  }
+
+  body.landscape-ui .topbar {
+    top:max(12px, env(safe-area-inset-top));
+  }
+
+  body.landscape-ui .viewDock {
+    max-width:min(760px, 72vw);
+  }
+
+  body.desktop-ui .viewDock {
+    max-width:880px;
+  }
+
+  body.desktop-ui .viewGrid {
+    grid-template-columns:repeat(6, minmax(96px, 1fr));
+  }
+
+
+  .loading {
+    overflow:hidden;
+  }
+
+  .loadingCard {
+    position:relative;
+    width:min(520px,92vw);
+    padding:30px 26px 26px;
+  }
+
+  .loadingCard::before {
+    content:"";
+    position:absolute;
+    inset:-80px;
+    background:
+      radial-gradient(circle at 50% 12%, rgba(203,37,45,.32), transparent 28%),
+      radial-gradient(circle at 20% 90%, rgba(255,255,255,.12), transparent 30%);
+    opacity:.9;
+    pointer-events:none;
+  }
+
+  .loadingBadge {
+    position:relative;
+    width:min(330px,78vw);
+    aspect-ratio:1.72;
+    margin:0 auto 18px;
+    border-radius:30px;
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    background:
+      linear-gradient(135deg, rgba(203,37,45,.92), rgba(88,9,18,.96) 45%, rgba(8,10,14,.96)),
+      radial-gradient(circle at 50% 0%, rgba(255,255,255,.35), transparent 42%);
+    border:1px solid rgba(255,255,255,.24);
+    box-shadow:
+      0 26px 70px rgba(0,0,0,.46),
+      inset 0 1px 0 rgba(255,255,255,.28),
+      inset 0 -24px 80px rgba(0,0,0,.35);
+  }
+
+  .loadingBadge::before {
+    content:"";
+    position:absolute;
+    inset:14px;
+    border-radius:24px;
+    border:1px solid rgba(255,255,255,.20);
+  }
+
+  .loadingBadge::after {
+    content:"812";
+    position:absolute;
+    right:22px;
+    bottom:12px;
+    font-size:58px;
+    line-height:1;
+    font-weight:950;
+    letter-spacing:-.08em;
+    color:rgba(255,255,255,.075);
+  }
+
+  .loadingLogoTop {
+    position:relative;
+    z-index:1;
+    font-size:11px;
+    line-height:1;
+    font-weight:950;
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.76);
+    margin-bottom:10px;
+  }
+
+  .loadingLogoMain {
+    position:relative;
+    z-index:1;
+    font-size:clamp(34px, 10vw, 66px);
+    line-height:.85;
+    font-weight:950;
+    letter-spacing:-.085em;
+    color:#fff;
+    text-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+
+  .loadingLogoSub {
+    position:relative;
+    z-index:1;
+    margin-top:10px;
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.72);
+  }
+
+  .loadingTitle {
+    position:relative;
+    font-size:22px;
+    line-height:1;
+    font-weight:950;
+    letter-spacing:-.04em;
+  }
+
+  .loadingBar {
+    position:relative;
+    height:8px;
+    margin:18px auto 0;
+    width:min(340px,76vw);
+    border-radius:999px;
+    overflow:hidden;
+    background:rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.10);
+  }
+
+  .loadingBar::before {
+    content:"";
+    position:absolute;
+    inset:0;
+    width:42%;
+    border-radius:999px;
+    background:linear-gradient(90deg, rgba(255,255,255,.16), rgba(255,255,255,.90), rgba(255,255,255,.18));
+    animation:loadingSweep 1.45s ease-in-out infinite;
+  }
+
+  @keyframes loadingSweep {
+    0% { transform:translateX(-120%); }
+    100% { transform:translateX(260%); }
+  }
+
+</style>
+</head>
+
+<body>
+<div id="app">
+  <div id="viewer"></div>
+
+
+  <div class="watermark">
+    <div>© Zenith Project — Ferrari 812 GTS Experience</div>
+    <div>Created by G.Zeneli</div>
+  </div>
+
+  <div class="modelCredit">
+    3D model: 2020 Ferrari 812 GTS by Ddiaz Design
+  </div>
+
+  <div class="topbar">
+    <div class="hero">
+      <div class="heroBrandRow">
+        <div class="brandMark" aria-hidden="true"><span class="brandMarkLine"></span></div>
+        <div class="heroText">
+          <div class="eyebrow" id="eyebrow">Ferrari 812 GTS</div>
+          <div class="title">Zenith Project</div>
+          <div class="lead" id="lead"></div>
+          <div class="miniStats" id="miniStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topControls">
+      <button class="ctrlBtn themeSwitch" id="themeBtn" onclick="toggleTheme()" aria-label="Theme wechseln">
+        <span class="themeTrack">
+          <span class="themeIcon moon">☾</span>
+          <span class="themeIcon sun">☀</span>
+          <span class="themeThumb"></span>
+        </span>
+      </button>
+      <button class="ctrlBtn icon rotateIcon" id="autoRotateBtn" onclick="toggleAutoRotate()" aria-label="Automatische Drehung"></button>
+      <button class="ctrlBtn icon" id="moreBtn" onclick="toggleMoreMenu()" aria-label="Mehr Optionen">
+        <span class="moreIcon">…</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="morePanel glass" id="morePanel">
+    <div class="morePanelTitle">More Controls</div>
+    <button class="moreBtn" id="interiorBtn" onclick="toggleInteriorMode(); closeMoreMenu();">
+      <span>Interior</span>
+      <span>Cockpit</span>
+    </button>
+    <button class="moreBtn" id="engineBtn" onclick="toggleEngineHoodFocus(); closeMoreMenu();">
+      <span>Engine View</span>
+      <span>Hood focus</span>
+    </button>
+    <button class="moreBtn" id="showroomBtn" onclick="toggleShowroomMode(); closeMoreMenu();">
+      <span>Showroom</span>
+      <span>Drone tour</span>
+    </button>
+    <button class="moreBtn" id="pulseBtn" onclick="toggleV12Pulse(); closeMoreMenu();">
+      <span>V12 Pulse</span>
+      <span>Light rhythm</span>
+    </button>
+    <button class="moreBtn" id="fullscreenBtn" onclick="toggleFullscreen(); closeMoreMenu();">
+      <span>Fullscreen</span>
+      <span>Display</span>
+    </button>
+    <button class="moreBtn" id="mobileBtn" onclick="toggleMobileMode(); closeMoreMenu();">
+      <span>HD Mode</span>
+      <span>Quality</span>
+    </button>
+    <button class="moreBtn" onclick="hideDock(); closeMoreMenu();">
+      <span>Hide UI</span>
+      <span>Clean View</span>
+    </button>
+  </div>
+
+  <div class="floatingTools">
+    <div class="floatingGroup">
+      <button id="compareBtn" class="toolBtn" onclick="toggleCompare()">↕ 1.88 m</button>
+    </div>
+    <div class="floatingGroup">
+      <button id="detailsBtn" class="toolBtn details" onclick="openDetailsSheet('overview')">Details</button>
+    </div>
+  </div>
+
+  <div class="viewDock" id="dock" aria-label="Camera Views">
+    <button class="pillBtn" onclick="setCameraView('home')">Home</button>
+    <button class="pillBtn" onclick="setCameraView('front')">Front</button>
+    <button class="pillBtn" onclick="setCameraView('side')">Side</button>
+    <button class="pillBtn" onclick="setCameraView('rear')">Rear</button>
+    <button class="pillBtn" onclick="setCameraView('wheel')">Wheel</button>
+    <button class="pillBtn" onclick="setCameraView('top')">Top</button>
+  </div>
+
+  <div class="status" id="status">Ferrari model is loading. After that you can rotate, zoom, open Details and activate scale mode.</div>
+
+  <div id="showDockBtn"><button onclick="showDock()">Show UI</button></div>
+
+  <div id="detailsSheet" class="modalWrap bottomSheetWrap" onclick="backdropClose(event,'detailsSheet')">
+    <div class="modal bottomSheet" onclick="event.stopPropagation()">
+      <div class="sheetHandle"></div>
+      <div class="modalHeader">
+        <div>
+          <div class="sectionLabel" style="margin:0;">Ferrari Details</div>
+          <div class="modalTitle">Ferrari 812 GTS</div>
+        </div>
+        <button class="closeBtn" onclick="closeDetailsSheet()">×</button>
+      </div>
+
+      <div class="sheetTabs detailsTabs" role="tablist" aria-label="Ferrari Details">
+        <button class="sheetTab active" id="overviewTab" onclick="setDetailsTab('overview')">Overview</button>
+        <button class="sheetTab" id="performanceTab" onclick="setDetailsTab('performance')">Power</button>
+        <button class="sheetTab" id="designTab" onclick="setDetailsTab('design')">Design</button>
+        <button class="sheetTab" id="factsTab" onclick="setDetailsTab('facts')">Facts</button>
+      </div>
+
+      <div class="sheetPane active" id="overviewPane">
+        <div class="overviewHero">
+          <div>
+            <div class="overviewKicker">Premium Showcar Experience</div>
+            <div class="overviewTitle">Ferrari 812 GTS</div>
+            <div class="overviewText">A focused V12 roadster presentation with cinematic camera views, glass UI and a clean showroom atmosphere.</div>
+          </div>
+          <div class="overviewBadge">V12</div>
+        </div>
+        <div class="detailMetricGrid" id="overviewCards"></div>
+      </div>
+
+      <div class="sheetPane" id="performancePane">
+        <div class="detailMetricGrid" id="performanceCards"></div>
+        <div class="note" style="margin-top:14px;">Values are approximate reference values for a Ferrari-only clean build presentation.</div>
+      </div>
+
+      <div class="sheetPane" id="designPane">
+        <div class="detailStoryGrid" id="designCards"></div>
+      </div>
+
+      <div class="sheetPane" id="factsPane">
+        <div class="infoModalBody">
+          <div class="infoVisual">
+            <div class="infoCarSymbol ferrariSketch" aria-hidden="true">
+              <svg viewBox="0 0 420 170" role="img">
+                <defs>
+                  <linearGradient id="sketchRed" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="rgba(255,255,255,.88)"/>
+                    <stop offset=".48" stop-color="rgba(255,255,255,.64)"/>
+                    <stop offset="1" stop-color="rgba(203,37,45,.86)"/>
+                  </linearGradient>
+                </defs>
+                <path class="sketchLine main" d="M38 104 C64 78, 96 67, 139 67 L190 67 C211 43, 239 33, 284 39 C309 43, 333 56, 353 75 C377 79, 397 90, 405 104 C393 111, 379 114, 359 114 L331 114 C326 93, 309 80, 286 80 C262 80, 244 94, 240 114 L157 114 C152 92, 134 80, 112 80 C89 80, 71 94, 67 114 L45 114 C32 114, 27 111, 38 104 Z"/>
+                <path class="sketchLine roof" d="M181 67 C203 44, 232 35, 276 40 C290 42, 303 47, 315 56 L287 73 L220 73 C204 72, 192 70, 181 67 Z"/>
+                <path class="sketchLine detail" d="M55 101 C91 91, 128 87, 170 88"/>
+                <path class="sketchLine detail" d="M300 84 C330 83, 356 89, 382 101"/>
+                <path class="sketchLine detail" d="M177 91 C197 102, 219 106, 244 106"/>
+                <path class="sketchLine accent" d="M67 114 L42 128 L103 128"/>
+                <path class="sketchLine accent" d="M241 114 L331 114 L380 126"/>
+                <circle class="sketchWheel" cx="112" cy="115" r="31"/>
+                <circle class="sketchWheel" cx="286" cy="115" r="31"/>
+                <circle class="sketchHub" cx="112" cy="115" r="10"/>
+                <circle class="sketchHub" cx="286" cy="115" r="10"/>
+                <path class="sketchLine fine" d="M104 67 C112 55, 126 49, 148 47"/>
+                <path class="sketchLine fine" d="M330 75 C342 67, 356 65, 371 70"/>
+              </svg>
+            </div>
+            <div class="infoVisualTitle" id="infoVisualTitle">V12-Showcar</div>
+            <div class="infoVisualText" id="infoVisualText"></div>
+          </div>
+          <div class="infoFactList" id="infoFactList" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="loadingCard">
+      <div class="loadingBadge" aria-hidden="true">
+        <div>
+          <div class="loadingLogoTop">Zenith Project</div>
+          <div class="loadingLogoMain">812</div>
+          <div class="loadingLogoSub">GTS Showroom</div>
+        </div>
+      </div>
+      <div class="loadingTitle">Preparing Ferrari 812 GTS</div>
+      <div class="note" style="position:relative;margin-top:8px;">Loading the premium 3D showroom experience.</div>
+      <div class="loadingBar" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="error hidden" id="error">
+    <div class="errorCard">
+      <div style="font-size:20px;font-weight:950;">Fehler</div>
+      <div class="note" id="errorText" style="margin-top:8px;">Die Seite konnte nicht geladen werden.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  WICHTIG:
+  Ersetze den ersten Eintrag in FERRARI_MODEL_URLS durch deinen Google-Drive-Downloadlink,
+  falls du die GLB-Datei in Drive nutzt:
+  https://drive.google.com/uc?export=download&id=DEINE_DATEI_ID
+*/
+const FERRARI_MODEL_URLS = [
+  "https://raw.githubusercontent.com/kaqo2023-design/ferrari_812_gts.glb/main/ferrari_812_gts.glb",
+  "https://raw.githubusercontent.com/kaqo2023-design/ferrari_812_gts.glb/main/ferrari_812_gts.glb.glb"
+];
+const CAR_DATA = {
+  eyebrow:"Ferrari 812 GTS",
+  lead:"Ferrari 812 GTS als fokussierte Premium-Showcar-Experience: V12-Saugmotor, roter Lack, Garage-Stimmung und weniger Code-Ballast.",
+  stats:["800 PS","V12 Sauger","340 km/h","Ferrari-only"],
+  status:"Ferrari 812 GTS aktiv.",
+  cards:[
+    ["Motor","6.5 l V12","Frei saugender V12 mit direkter Leistungsentfaltung und starkem Showcar-Charakter."],
+    ["Leistung","800 PS","Der 812 GTS gehört zu den stärksten offenen Frontmotor-Ferrari-Modellen."],
+    ["0–100 km/h","ca. 3.0 s","Sehr schneller Sprint für einen offenen V12-GT."],
+    ["Top Speed","340 km/h","Sehr hohe Endgeschwindigkeit mit Grand-Touring-Fokus."],
+    ["Layout","Frontmotor","Langer Vorderwagen, Heckantrieb und klassische GT-Proportionen."],
+    ["Charakter","V12 Roadster","Mehr Emotion, Sound und Präsenz als eine reine Track-Maschine."],
+    ["Modell","GLB","3D model: 2020 Ferrari 812 GTS by Ddiaz Design · CC Attribution."],
+    ["Projektziel","Realismus","Weniger Funktionen, mehr Fokus auf Licht, Material, Schatten und Kamera."]
+  ]
+};
+
+const INFO_FACTS = [
+  { icon:"engine", value:"800 PS", title:"6,5-Liter-V12", text:"Der frei saugende V12 liefert rund 800 PS und ist der emotionale Kern dieser Showcar-Experience." },
+  { icon:"speed", value:"3,0 s", title:"0–100 km/h", text:"Der 812 GTS sprintet in etwa 3,0 Sekunden auf 100 km/h und verbindet GT-Komfort mit Supersportwagen-Leistung." },
+  { icon:"speed", value:"340 km/h", title:"Hohe Endgeschwindigkeit", text:"Mit rund 340 km/h gehört der 812 GTS zu den sehr schnellen offenen Frontmotor-GT-Fahrzeugen." },
+  { icon:"engine", value:"V12", title:"Saugmotor-Drama", text:"Der Motor liefert nicht nur Zahlen, sondern vor allem Drehfreude, Klang und unmittelbares Ansprechverhalten." },
+  { icon:"weight", value:"Frontmotor", title:"Klassische GT-Proportionen", text:"Langer Vorderwagen, Heckantrieb und V12 vorne sorgen für eine typische Ferrari-GT-Silhouette." },
+  { icon:"track", value:"GTS", title:"Offene Ferrari-Erfahrung", text:"Beim GTS steht zusätzlich das offene Roadster-Erlebnis im Mittelpunkt." },
+  { icon:"aero", value:"Design", title:"Aerodynamisch integriert", text:"Luftführung und Form wirken nicht wie Anbauteile, sondern als Teil des Designs." },
+  { icon:"price", value:"Premium", title:"Showcar-Faktor", text:"Das Projekt soll weniger wie ein Datenblatt und mehr wie eine digitale Fahrzeug-Präsentation wirken." }
+];
+
+const DETAIL_OVERVIEW = [
+  ["Experience", "Showroom", "Clean mobile-first presentation with cinematic camera presets and minimal distraction."],
+  ["Focus", "Ferrari-only", "No mixed vehicle content: every section is centered on the 812 GTS."],
+  ["Interaction", "Touch ready", "Camera views, details and scale mode are placed for thumb-friendly mobile use."],
+  ["Visual style", "Glass UI", "Transparent controls, soft blur and subtle reflections keep the car in focus."]
+];
+
+const DETAIL_PERFORMANCE = [
+  ["Engine", "6.5 l V12", "Naturally aspirated V12 character with strong emotional presence."],
+  ["Power", "800 PS", "A high-output front-engine Ferrari roadster experience."],
+  ["0-100 km/h", "ca. 3.0 s", "Fast sprint performance with GT proportions."],
+  ["Top speed", "340 km/h", "High-speed grand touring character with open-roof drama."]
+];
+
+const DETAIL_DESIGN = [
+  ["Silhouette", "Long hood", "Classic front-engine Ferrari proportions with a powerful roadster stance."],
+  ["Rear", "Wide stance", "The rear view emphasizes width, exhaust presence and showroom drama."],
+  ["Wheel focus", "Forged detail", "The wheel camera view highlights rim, tire and brake presence."],
+  ["Project goal", "Realism", "Less feature overload, more lighting, material depth, shadows and camera feel."]
+];
+
+
+const HOTSPOT_DATA = [
+  {
+    id:"overview",
+    kicker:"Overview",
+    title:"Ferrari 812 GTS presence",
+    text:"A clean showroom frame for the full car: proportions, red paint, stance and V12 roadster character in one view.",
+    pos:{ x:0, y:0.95, z:0 }
+  },
+  {
+    id:"engine",
+    kicker:"V12",
+    title:"Front-mounted V12",
+    text:"Long hood, front-engine balance and V12 presence. Shown when the Front view is selected.",
+    pos:{ x:1.08, y:0.88, z:0.02 }
+  },
+  {
+    id:"wheel",
+    kicker:"Wheel",
+    title:"Forged wheel focus",
+    text:"Wheel, tire and brake detail. Shown when the Wheel view is selected.",
+    pos:{ x:-0.85, y:0.62, z:-1.38 }
+  },
+  {
+    id:"cockpit",
+    kicker:"Interior",
+    title:"Open cockpit line",
+    text:"The 812 GTS keeps the roadster feeling visible from above. Shown for the Top or Interior view.",
+    pos:{ x:-0.18, y:1.18, z:0.02 }
+  },
+  {
+    id:"aero",
+    kicker:"Aero",
+    title:"Integrated aero surfaces",
+    text:"Side profile and airflow surfaces: shown when the Side view is selected.",
+    pos:{ x:1.72, y:0.48, z:-0.72 }
+  },
+  {
+    id:"rear",
+    kicker:"Rear",
+    title:"Wide rear stance",
+    text:"Broad GT stance, diffuser area and exhaust presence. Shown when the Rear view is selected.",
+    pos:{ x:-1.78, y:0.70, z:0.72 }
+  }
+];
+
+const ZENITH_STORAGE_KEY = "zenithFerrariOnlyV6";
+const FERRARI_RED = 0x6f0911;
+// Dedizierte Presets für Mobile/Hochformat (FOV 58)
+const MOBILE_CAMERA_PRESETS = {
+  home:  { pos: { x:12.5, y:4.8, z:14.5 }, target: { x:0, y:0.92, z:0 }, zoom:1 },
+  front: { pos: { x:4.8, y:1.5, z:-3.6 },  target: { x:1.1, y:0.5, z:-0.9 }, zoom:1 },
+  side:  { pos: { x:-14.5, y:2.4, z:0.0 }, target: { x:0.0, y:0.8, z:0.0 }, zoom:1 },
+  rear:  { pos: { x:-8.2, y:2.1, z:8.8 },  target: { x:-0.2, y:0.8, z:0.2 }, zoom:1 },
+  wheel: { pos: { x:-5.8, y:1.1, z:-3.7 }, target: { x:-0.9, y:0.6, z:-1.4 }, zoom:1 },
+  top:   { pos: { x:0.0, y:16.5, z:0.1 },  target: { x:0.0, y:0.6, z:0.0 }, zoom:1 }
+};
+const DRONE_SHOWROOM = {
+  sideDuration: 24000,
+  topDuration: 18000,
+  radiusMobile: 8.9,
+  radiusDesktop: 7.2,
+  heightMobile: 1.95,
+  heightDesktop: 1.65,
+  topHeightMobile: 10.6,
+  topHeightDesktop: 8.9
+};
+let cameraPresets = {};
+
+let scene, camera, renderer, controls, clock;
+let worldGroup, stageGroup, carGroup;
+let keyLight, fillLight, rimLight, hemiLight;
+let interiorLight = null;
+let model = null;
+let bodyMeshes = [];
+let glassMeshes = [];
+let darkMeshes = [];
+let wheelMeshes = [];
+let tireMeshes = [];
+let rimMeshes = [];
+let brakeMeshes = [];
+let metalMeshes = [];
+let human = null;
+let compareActive = false;
+let interiorMode = false;
+let engineHoodMode = false;
+let modelTicket = 0;
+let fallbackTimer = null;
+let mobileMode = false;
+let autoRotateActive = false;
+let showroomActive = false;
+let showroomStartTime = 0;
+let showroomPhase = "side";
+let savedInteriorCamera = null;
+let savedEngineCamera = null;
+let materialMemory = new Map();
+let v12PulseActive = false;
+let pulseStartTime = 0;
+let baseExposure = 0.94;
+let pulseStateSaved = null;
+let floorMesh, platformMesh, backWall, leftWall, rightWall;
+let hotspotsActive = false;
+let hotspotElements = [];
+let activeHotspotId = "overview";
+let lastFocusHotspotId = null;
+let currentCameraView = "home";
+let hotspotWorld = new THREE.Vector3();
+let hotspotScreen = new THREE.Vector3();
+
+window.addEventListener("load", function() {
+  try {
+    loadConfigBeforeInit();
+    init();
+  } catch(e) {
+    console.error(e);
+    showError("Script-Fehler: " + (e && e.message ? e.message : e));
+  }
+});
+
+function init() {
+  const viewer = document.getElementById("viewer");
+  const w = viewer.clientWidth || window.innerWidth;
+  const h = viewer.clientHeight || window.innerHeight;
+
+  clock = new THREE.Clock();
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(document.body.classList.contains("light") ? 0xe9eff6 : 0x07080c);
+  scene.fog = new THREE.FogExp2(document.body.classList.contains("light") ? 0xe9eff6 : 0x07080c, document.body.classList.contains("light") ? 0.018 : 0.026);
+
+  camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 100);
+camera.position.set(4.95, 1.95, 5.55);
+
+renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:"high-performance" });
+renderer.setSize(w, h);
+renderer.setPixelRatio(mobileMode ? Math.min(window.devicePixelRatio || 1, 1.35) : Math.min(window.devicePixelRatio || 1, 1.8));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.94;
+renderer.physicallyCorrectLights = true;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+viewer.appendChild(renderer.domElement);
+
+controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.rotateSpeed = mobileMode ? 0.48 : 0.62;
+controls.zoomSpeed = mobileMode ? 0.65 : 0.8;
+controls.minDistance = 1.2;
+controls.maxDistance = 22;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.target.set(0, 0.92, 0);
+  controls.autoRotate = autoRotateActive;
+  controls.autoRotateSpeed = 0.85;
+
+  worldGroup = new THREE.Group();
+  stageGroup = new THREE.Group();
+  carGroup = new THREE.Group();
+  scene.add(worldGroup);
+  worldGroup.add(stageGroup);
+  worldGroup.add(carGroup);
+
+buildStudio();
+updateSceneTheme(document.body.classList.contains("light"));
+buildHuman();
+initHotspots();
+updateUI();
+loadCameraPresets();
+applyConfigAfterInit();
+autoEnableMobileModeIfNeeded();
+loadCar();
+animate();
+
+  window.addEventListener("resize", function() { onResize(); syncAdaptiveLayout(); });
+  document.addEventListener("fullscreenchange", syncFullscreenButton);
+}
+
+function buildStudio() {
+  hemiLight = new THREE.HemisphereLight(0xf2f5ff, 0x11141a, 0.82);
+  scene.add(hemiLight);
+
+  keyLight = new THREE.DirectionalLight(0xffffff, 2.15);
+  keyLight.position.set(4.8, 7.2, 4.6);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(2048, 2048);
+  keyLight.shadow.radius = 6;
+  keyLight.shadow.bias = -0.00012;
+  keyLight.shadow.normalBias = 0.02;
+  keyLight.shadow.camera.near = 0.5;
+  keyLight.shadow.camera.far = 25;
+  keyLight.shadow.camera.left = -8;
+  keyLight.shadow.camera.right = 8;
+  keyLight.shadow.camera.top = 8;
+  keyLight.shadow.camera.bottom = -8;
+  scene.add(keyLight);
+
+  fillLight = new THREE.DirectionalLight(0xc9d3e6, 0.58);
+  fillLight.position.set(-6.4, 4.4, 5.6);
+  scene.add(fillLight);
+
+  rimLight = new THREE.DirectionalLight(0xffffff, 1.05);
+  rimLight.position.set(-4.8, 4.9, -6.3);
+  scene.add(rimLight);
+
+  const topAccent = new THREE.DirectionalLight(0xffffff, 0.72);
+  topAccent.position.set(0, 8.5, 0);
+  scene.add(topAccent);
+
+  const floorMat = new THREE.MeshStandardMaterial({
+    color:0x2d333d,
+    roughness:0.84,
+    metalness:0.03
+  });
+
+  floorMesh = new THREE.Mesh(new THREE.CircleGeometry(13, 128), floorMat);
+floorMesh.rotation.x = -Math.PI / 2;
+floorMesh.receiveShadow = true;
+stageGroup.add(floorMesh);
+
+  const platformMat = new THREE.MeshStandardMaterial({
+    color:0x474f5b,
+    roughness:0.70,
+    metalness:0.05
+  });
+
+  platformMesh = new THREE.Mesh(new THREE.CylinderGeometry(3.55, 3.68, 0.12, 128), platformMat);
+platformMesh.position.y = 0.06;
+platformMesh.receiveShadow = true;
+stageGroup.add(platformMesh);
+
+  const softShadowTex = makeSoftShadowTexture();
+
+  const carContactShadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.35, 2.45),
+    new THREE.MeshBasicMaterial({
+      map:softShadowTex,
+      transparent:true,
+      opacity:0.38,
+      depthWrite:false
+    })
+  );
+  carContactShadow.rotation.x = -Math.PI / 2;
+  carContactShadow.position.set(0, 0.145, 0);
+  carContactShadow.renderOrder = 1;
+  stageGroup.add(carContactShadow);
+
+  const wheelShadowMat = new THREE.MeshBasicMaterial({
+    map:softShadowTex,
+    transparent:true,
+    opacity:0.26,
+    depthWrite:false
+  });
+
+  [
+    [1.25, -0.78],
+    [1.25, 0.78],
+    [-1.25, -0.78],
+    [-1.25, 0.78]
+  ].forEach(function(p) {
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 0.44), wheelShadowMat.clone());
+    s.rotation.x = -Math.PI / 2;
+    s.position.set(p[0], 0.148, p[1]);
+    s.renderOrder = 2;
+    stageGroup.add(s);
+  });
+
+  const wallMat = new THREE.MeshStandardMaterial({
+    map:makeBackdropTexture(),
+    color:0x11151d,
+    roughness:1,
+    metalness:0
+  });
+
+  backWall = new THREE.Mesh(new THREE.PlaneGeometry(24, 11.5), wallMat);
+backWall.position.set(0, 5.15, -8.9);
+stageGroup.add(backWall);
+
+  leftWall = new THREE.Mesh(new THREE.PlaneGeometry(8, 9.8), wallMat.clone());
+leftWall.position.set(-8.4, 4.9, -4.9);
+leftWall.rotation.y = 0.92;
+stageGroup.add(leftWall);
+
+  rightWall = new THREE.Mesh(new THREE.PlaneGeometry(8, 9.8), wallMat.clone());
+rightWall.position.set(8.4, 4.9, -4.9);
+rightWall.rotation.y = -0.92;
+stageGroup.add(rightWall);
+
+  addSoftbox(-2.55, 4.85, -3.75, 2.8, 0.18);
+  addSoftbox(2.55, 4.75, -3.9, 2.8, -0.18);
+}
+
+function updateSceneTheme(isLight) {
+  if (!scene) return;
+
+  scene.background = new THREE.Color(isLight ? 0xe9eff6 : 0x07080c);
+
+  if (scene.fog) {
+    scene.fog.color = new THREE.Color(isLight ? 0xe9eff6 : 0x07080c);
+    scene.fog.density = isLight ? 0.018 : 0.026;
+  }
+
+  baseExposure = isLight ? 1.02 : 0.94;
+
+  if (renderer && !v12PulseActive) {
+    renderer.toneMappingExposure = baseExposure;
+  }
+
+  if (hemiLight) {
+    hemiLight.color.setHex(isLight ? 0xffffff : 0xf2f5ff);
+    hemiLight.groundColor.setHex(isLight ? 0xd8e0ea : 0x11141a);
+    hemiLight.intensity = isLight ? 1.00 : 0.82;
+  }
+
+  if (keyLight) {
+    keyLight.color.setHex(0xffffff);
+    keyLight.intensity = isLight ? 2.55 : 2.15;
+  }
+
+  if (fillLight) {
+    fillLight.color.setHex(isLight ? 0xe7eef8 : 0xc9d3e6);
+    fillLight.intensity = isLight ? 0.90 : 0.58;
+  }
+
+  if (rimLight) {
+    rimLight.color.setHex(isLight ? 0xffffff : 0xffffff);
+    rimLight.intensity = isLight ? 1.18 : 1.05;
+  }
+
+  if (floorMesh && floorMesh.material) {
+    floorMesh.material.color.setHex(isLight ? 0xdce3eb : 0x2d333d);
+    floorMesh.material.roughness = isLight ? 0.90 : 0.84;
+    floorMesh.material.needsUpdate = true;
+  }
+
+  if (platformMesh && platformMesh.material) {
+    platformMesh.material.color.setHex(isLight ? 0xcfd7e0 : 0x474f5b);
+    platformMesh.material.roughness = isLight ? 0.76 : 0.70;
+    platformMesh.material.needsUpdate = true;
+  }
+
+  [backWall, leftWall, rightWall].forEach(function(mesh) {
+    if (!mesh || !mesh.material) return;
+    mesh.material.color.setHex(isLight ? 0xf1f4f8 : 0x11151d);
+    mesh.material.needsUpdate = true;
+  });
+}
+
+function addSoftbox(x, y, z, w, rotY) {
+  const mat = new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.12, side:THREE.DoubleSide });
+  const box = new THREE.Mesh(new THREE.PlaneGeometry(w, .62), mat);
+  box.position.set(x, y, z);
+  box.rotation.y = rotY;
+  stageGroup.add(box);
+}
+
+function makeBackdropTexture() {
+  const c = document.createElement("canvas");
+  c.width = 1024;
+  c.height = 512;
+
+  const ctx = c.getContext("2d");
+
+  const g = ctx.createLinearGradient(0, 0, 0, c.height);
+  g.addColorStop(0, "#1a1f29");
+  g.addColorStop(0.48, "#10141c");
+  g.addColorStop(1, "#07080c");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  const glow = ctx.createRadialGradient(512, 145, 40, 512, 180, 520);
+  glow.addColorStop(0, "rgba(255,255,255,.105)");
+  glow.addColorStop(0.42, "rgba(203,37,45,.055)");
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  ctx.globalAlpha = 0.095;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 70px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("ZENITH FERRARI", 512, 414);
+
+  ctx.globalAlpha = 1;
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function makeSoftShadowTexture() {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 256;
+
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(256, 128, 12, 256, 128, 246);
+
+  g.addColorStop(0, "rgba(0,0,0,.72)");
+  g.addColorStop(0.34, "rgba(0,0,0,.34)");
+  g.addColorStop(0.68, "rgba(0,0,0,.10)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function buildHuman() {
+  human = new THREE.Group();
+  human.visible = false;
+  human.position.set(2.85, 0.14, 1.34);
+
+  const lineMat = new THREE.LineBasicMaterial({
+  color:0xffffff,
+  transparent:true,
+  opacity:0.72
+});
+
+  const accentMat = new THREE.MeshBasicMaterial({
+  color:0xffffff,
+  transparent:true,
+  opacity:0.08,
+  side:THREE.DoubleSide
+});
+
+  function addLine(points) {
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geo, lineMat);
+    human.add(line);
+    return line;
+  }
+
+  // Haupt-Messlinie: 1,88 m
+  addLine([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 1.88, 0)
+  ]);
+
+  // Kopf- und Bodenstriche
+  addLine([
+    new THREE.Vector3(-0.18, 0, 0),
+    new THREE.Vector3(0.18, 0, 0)
+  ]);
+
+  addLine([
+    new THREE.Vector3(-0.18, 1.88, 0),
+    new THREE.Vector3(0.18, 1.88, 0)
+  ]);
+
+  // kleine Zwischenmarken
+  [0.5, 1.0, 1.5].forEach(function(y) {
+    addLine([
+      new THREE.Vector3(-0.10, y, 0),
+      new THREE.Vector3(0.10, y, 0)
+    ]);
+  });
+
+  // dezente transparente Fläche dahinter
+  const panel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.46, 1.88),
+    accentMat
+  );
+  panel.position.set(0, 0.94, -0.015);
+  human.add(panel);
+
+  // Label als Sprite
+  const labelCanvas = document.createElement("canvas");
+  labelCanvas.width = 512;
+  labelCanvas.height = 160;
+
+  const ctx = labelCanvas.getContext("2d");
+  ctx.clearRect(0, 0, 512, 160);
+
+  ctx.fillStyle = "rgba(10,12,16,.82)";
+  roundRect(ctx, 64, 34, 384, 92, 34);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,.18)";
+  ctx.lineWidth = 3;
+  roundRect(ctx, 64, 34, 384, 92, 34);
+  ctx.stroke();
+
+  ctx.fillStyle = "white";
+  ctx.font = "900 44px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("1,88 m", 256, 72);
+
+  ctx.fillStyle = "rgba(255,255,255,.62)";
+  ctx.font = "800 20px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillText("Maßstab", 256, 105);
+
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
+  labelTex.needsUpdate = true;
+
+  const label = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map:labelTex,
+      transparent:true
+    })
+  );
+
+  label.scale.set(0.9, 0.28, 1);
+  label.position.set(0.62, 1.02, 0);
+  label.name = "heightLabel";
+  human.add(label);
+
+  worldGroup.add(human);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function loadCar() {
+  const ticket = ++modelTicket;
+  showLoading(true);
+  clearSceneCar();
+  if (fallbackTimer) clearTimeout(fallbackTimer);
+  fallbackTimer = setTimeout(function() {
+    if (ticket === modelTicket && !model) buildFallbackCar("Modellquelle lädt nicht. Rotes Ersatzmodell gestartet.");
+  }, 12000);
+  tryLoadModelUrl(FERRARI_MODEL_URLS, 0, ticket);
+}
+
+function tryLoadModelUrl(urls, index, ticket) {
+  if (ticket !== modelTicket) return;
+  if (index >= urls.length) { buildFallbackCar("Keine Modellquelle erreichbar. Ersatzmodell geladen."); return; }
+
+  setStatus("Ferrari model loading... source " + (index + 1) + " of " + urls.length);
+  const loader = new THREE.GLTFLoader();
+  let done = false;
+  const timeout = setTimeout(function() {
+    if (done || ticket !== modelTicket) return;
+    done = true;
+    tryLoadModelUrl(urls, index + 1, ticket);
+  }, 8000);
+
+  loader.load(urls[index], function(gltf) {
+    if (done || ticket !== modelTicket) return;
+    done = true; clearTimeout(timeout);
+    model = gltf.scene || gltf.scenes[0];
+    if (!model) { tryLoadModelUrl(urls, index + 1, ticket); return; }
+    classifyModel(model);
+    normalizeModel(model);
+    carGroup.add(model);
+    updateHotspotAnchors();
+    applyMaterialTuning();
+    setPaint("red", true);
+    finishCarLoad("Ferrari 812 GTS model loaded.");
+  }, function(progress) {
+    if (progress && progress.total) setStatus("Ferrari model loading... " + Math.round((progress.loaded / progress.total) * 100) + "%");
+  }, function() {
+    if (done || ticket !== modelTicket) return;
+    done = true; clearTimeout(timeout);
+    tryLoadModelUrl(urls, index + 1, ticket);
+  });
+}
+
+function startIntroPresentation() {
+  if (!camera || !controls) return;
+
+  document.body.classList.add("intro-active");
+  closeMoreMenu();
+  closeDetailsSheet();
+
+  const isMobileView =
+    mobileMode ||
+    window.innerWidth <= 760 ||
+    window.innerHeight > window.innerWidth;
+
+  camera.fov = isMobileView ? 54 : 38;
+  camera.updateProjectionMatrix();
+
+  controls.autoRotate = false;
+  controls.autoRotateSpeed = 0.85;
+
+  const shots = isMobileView
+    ? [
+        {
+          pos: { x:7.8, y:2.15, z:8.2 },
+          target: { x:0.05, y:0.86, z:0.03 },
+          duration:1200,
+          status:"Zenith Intro: Ferrari appears."
+        },
+        {
+          pos: { x:4.6, y:1.20, z:-3.20 },
+          target: { x:0.70, y:0.58, z:-0.85 },
+          duration:1450,
+          status:"Detail focus: front, wheel and paint."
+        },
+        {
+          pos: { x:-9.8, y:1.75, z:0.65 },
+          target: { x:0.05, y:0.78, z:0.02 },
+          duration:1650,
+          status:"Side profile: roadster proportions."
+        },
+        {
+          pos: { x:-6.8, y:1.65, z:6.8 },
+          target: { x:-0.05, y:0.82, z:0.10 },
+          duration:1450,
+          status:"Rear focus: wide stance."
+        },
+        {
+          pos: { x:8.2, y:2.45, z:-8.8 },
+          target: { x:0, y:0.92, z:0 },
+          duration:1900,
+          status:"Home activated."
+        }
+      ]
+    : [
+        {
+          pos: { x:4.95, y:1.95, z:5.55 },
+          target: { x:0, y:0.92, z:0 },
+          duration:1200,
+          status:"Zenith Intro: Ferrari appears."
+        },
+        {
+          pos: { x:2.85, y:0.82, z:-2.0 },
+          target: { x:1.05, y:0.48, z:-0.82 },
+          duration:1450,
+          status:"Detail focus: front, wheel and paint."
+        },
+        {
+          pos: { x:-6.6, y:1.25, z:0.25 },
+          target: { x:0, y:0.78, z:0 },
+          duration:1600,
+          status:"Side profile: roadster proportions."
+        },
+        {
+          pos: { x:-4.4, y:1.35, z:4.95 },
+          target: { x:0, y:0.82, z:0 },
+          duration:1450,
+          status:"Rear focus: wide stance."
+        },
+        {
+          pos: { x:4.95, y:1.95, z:-5.55 },
+          target: { x:0, y:0.92, z:0 },
+          duration:1900,
+          status:"Home activated."
+        }
+      ];
+
+  let index = 0;
+
+  function playShot() {
+    if (!camera || !controls) return;
+
+    const shot = shots[index];
+
+    cameraTween = {
+      startTime: performance.now(),
+      duration: shot.duration,
+      fromPos: camera.position.clone(),
+      toPos: new THREE.Vector3(shot.pos.x, shot.pos.y, shot.pos.z),
+      fromTarget: controls.target.clone(),
+      toTarget: new THREE.Vector3(shot.target.x, shot.target.y, shot.target.z),
+      fromZoom: camera.zoom || 1,
+      toZoom: 1
+    };
+
+    setStatus(shot.status);
+
+    index++;
+
+    if (index < shots.length) {
+      setTimeout(playShot, shot.duration + 120);
+    } else {
+      setTimeout(function() {
+        controls.autoRotate = false;
+        setStatus("Ferrari 812 GTS ready.");
+        document.body.classList.remove("intro-active");
+      }, shot.duration + 250);
+    }
+  }
+
+  playShot();
+}
+
+
+function finishCarLoad(message) {
+  if (fallbackTimer) clearTimeout(fallbackTimer);
+  showLoading(false);
+  setStatus(message || CAR_DATA.status);
+setTimeout(startIntroPresentation, 650);
+}
+
+function clearSceneCar() {
+  restoreInteriorMaterials();
+  model = null;
+bodyMeshes = [];
+glassMeshes = [];
+darkMeshes = [];
+wheelMeshes = [];
+tireMeshes = [];
+rimMeshes = [];
+brakeMeshes = [];
+metalMeshes = [];
+  if (!carGroup) return;
+  while (carGroup.children.length) carGroup.remove(carGroup.children[0]);
+}
+
+function addInteriorLight() {
+  removeInteriorLight();
+
+  interiorLight = new THREE.Group();
+
+  const mainLight = new THREE.PointLight(0xffffff, 2.8, 4.8);
+  mainLight.position.set(0.05, 1.18, 0.18);
+  mainLight.castShadow = false;
+
+  const fillLight = new THREE.PointLight(0xdfe8ff, 1.35, 4.2);
+  fillLight.position.set(-0.42, 1.02, 0.45);
+  fillLight.castShadow = false;
+
+  interiorLight.add(mainLight);
+  interiorLight.add(fillLight);
+
+  carGroup.add(interiorLight);
+}
+
+function removeInteriorLight() {
+  if (interiorLight && interiorLight.parent) {
+    interiorLight.parent.remove(interiorLight);
+  }
+  interiorLight = null;
+}
+
+function classifyModel(root) {
+  root.traverse(function(o) {
+    if (!o.isMesh) return;
+
+    o.castShadow = true;
+    o.receiveShadow = true;
+
+    const name = ((o.name || "") + " " + ((o.material && o.material.name) || "")).toLowerCase();
+
+    if (Array.isArray(o.material)) o.material = o.material[0];
+    if (o.material) o.material = o.material.clone();
+
+    if (/glass|window|screen|windshield|windscreen|scheibe/.test(name)) {
+      glassMeshes.push(o);
+      return;
+    }
+
+    if (/tyre|tire|reifen/.test(name)) {
+      tireMeshes.push(o);
+      wheelMeshes.push(o);
+      return;
+    }
+
+    if (/rim|wheel|felge/.test(name)) {
+      rimMeshes.push(o);
+      wheelMeshes.push(o);
+      return;
+    }
+
+    if (/brake|disc|rotor|caliper|bremse/.test(name)) {
+      brakeMeshes.push(o);
+      wheelMeshes.push(o);
+      return;
+    }
+
+    if (/seat|interior|dashboard|cockpit|cabin|steer|console|lenkrad/.test(name)) {
+      darkMeshes.push(o);
+      return;
+    }
+
+    if (/exhaust|badge|logo|trim|chrome|metal|grille/.test(name)) {
+      metalMeshes.push(o);
+      return;
+    }
+
+    bodyMeshes.push(o);
+  });
+}
+
+function normalizeModel(root) {
+  const box = new THREE.Box3().setFromObject(root);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size); box.getCenter(center);
+  root.position.sub(center);
+  const scale = 4.65 / Math.max(size.x, size.y, size.z);
+  root.scale.setScalar(scale);
+  const box2 = new THREE.Box3().setFromObject(root);
+  root.position.y -= box2.min.y;
+  root.rotation.y = Math.PI;
+  carGroup.position.set(0, 0.14, 0);
+}
+
+function applyMaterialTuning() {
+  function copyMaps(mat, old) {
+    if (!old) return;
+    if (old.map) mat.map = old.map;
+    if (old.normalMap) mat.normalMap = old.normalMap;
+    if (old.roughnessMap) mat.roughnessMap = old.roughnessMap;
+    if (old.metalnessMap) mat.metalnessMap = old.metalnessMap;
+    if (old.aoMap) mat.aoMap = old.aoMap;
+  }
+
+  bodyMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshPhysicalMaterial({
+      color:FERRARI_RED,
+      roughness:0.20,
+      metalness:0.03,
+      clearcoat:1.0,
+      clearcoatRoughness:0.02,
+      reflectivity:0.98
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  glassMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshPhysicalMaterial({
+      color:0x17202a,
+      roughness:0.025,
+      metalness:0.00,
+      transparent:true,
+      opacity:0.30,
+      clearcoat:1,
+      reflectivity:0.92
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  darkMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshStandardMaterial({
+      color:0x2b313a,
+      roughness:0.64,
+      metalness:0.05
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  tireMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshStandardMaterial({
+      color:0x0b0d10,
+      roughness:0.94,
+      metalness:0.01
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  rimMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshStandardMaterial({
+      color:0x626a75,
+      roughness:0.24,
+      metalness:0.92
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  brakeMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshStandardMaterial({
+      color:0x9aa0aa,
+      roughness:0.48,
+      metalness:0.62
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  metalMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshStandardMaterial({
+      color:0x777e89,
+      roughness:0.28,
+      metalness:0.82
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  if (!tireMeshes.length && !rimMeshes.length && wheelMeshes.length) {
+    wheelMeshes.forEach(function(m) {
+      const old = m.material || {};
+      const mat = new THREE.MeshStandardMaterial({
+        color:0x252b33,
+        roughness:0.38,
+        metalness:0.72
+      });
+
+      copyMaps(mat, old);
+      m.material = mat;
+    });
+  }
+}
+function buildFallbackCar(message) {
+  if (fallbackTimer) clearTimeout(fallbackTimer);
+  clearSceneCar();
+  const bodyMat = new THREE.MeshPhysicalMaterial({ color:FERRARI_RED, roughness:0.18, metalness:0.70, clearcoat:1, clearcoatRoughness:0.035 });
+  const darkMat = new THREE.MeshStandardMaterial({ color:0x090b10, roughness:0.76, metalness:0.18 });
+  const glassMat = new THREE.MeshPhysicalMaterial({ color:0x1f2a33, transparent:true, opacity:0.42, roughness:0.04, clearcoat:1 });
+  const tireMat = new THREE.MeshStandardMaterial({ color:0x07080a, roughness:0.92, metalness:0.05 });
+  const rimMat = new THREE.MeshStandardMaterial({ color:0xb8bec8, roughness:0.18, metalness:0.96 });
+  const group = new THREE.Group();
+  function box(name, sx, sy, sz, x, y, z, mat, rx, ry, rz) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+    mesh.name = name; mesh.position.set(x,y,z); mesh.rotation.set(rx||0,ry||0,rz||0); mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); return mesh;
+  }
+  bodyMeshes.push(box("body",3.85,.48,1.48,0,.55,0,bodyMat), box("long hood",1.45,.26,1.32,1.05,.76,0,bodyMat,0,0,-.035), box("rear",1.10,.42,1.50,-1.2,.77,0,bodyMat));
+  glassMeshes.push(box("glass",1.05,.42,1.0,-.25,1.05,0,glassMat,0,0,-.05));
+  darkMeshes.push(box("splitter",1.05,.07,1.58,1.98,.31,0,darkMat), box("diffuser",.85,.10,1.45,-1.95,.34,0,darkMat));
+  [[1.18,.38,-.82],[1.18,.38,.82],[-1.28,.38,-.82],[-1.28,.38,.82]].forEach(function(pos) {
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.22,48), tireMat); tire.rotation.z = Math.PI/2; tire.position.set(pos[0],pos[1],pos[2]); tire.castShadow=true; tire.receiveShadow=true; group.add(tire);
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(.20,.20,.24,36), rimMat); rim.rotation.z = Math.PI/2; rim.position.set(pos[0],pos[1],pos[2]); rim.castShadow=true; rim.receiveShadow=true; group.add(rim);
+    wheelMeshes.push(tire, rim);
+tireMeshes.push(tire);
+rimMeshes.push(rim);
+  });
+  model = group;
+  carGroup.add(model);
+  updateHotspotAnchors();
+  showLoading(false);
+  setStatus(message || "Ferrari Ersatzmodell geladen.");
+}
+
+function setPaint(key, silent) {
+  bodyMeshes.forEach(function(m) {
+    if (!m.material || !m.material.color) return;
+    m.material.color = new THREE.Color(FERRARI_RED);
+    m.material.needsUpdate = true;
+  });
+  if (!silent) setStatus("Ferrari Rot aktiv.");
+}
+
+function updateUI() {
+  document.getElementById("eyebrow").textContent = CAR_DATA.eyebrow;
+  document.getElementById("lead").textContent = CAR_DATA.lead;
+  document.getElementById("miniStats").innerHTML = CAR_DATA.stats.map(function(s) { return '<div class="miniStat">' + escapeHtml(s) + '</div>'; }).join("");
+  renderDetailsContent();
+}
+
+function renderDetailMetricCards(targetId, items) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.innerHTML = items.map(function(x) {
+    return '<article class="detailMetric"><div class="k">' + escapeHtml(x[0]) + '</div><div class="v">' + escapeHtml(x[1]) + '</div><div class="s">' + escapeHtml(x[2]) + '</div></article>';
+  }).join("");
+}
+
+function renderDetailStoryCards(targetId, items) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.innerHTML = items.map(function(x) {
+    return '<article class="detailStory"><div class="k">' + escapeHtml(x[0]) + '</div><div class="v">' + escapeHtml(x[1]) + '</div><div class="s">' + escapeHtml(x[2]) + '</div></article>';
+  }).join("");
+}
+
+function renderDetailsContent() {
+  renderDetailMetricCards("overviewCards", DETAIL_OVERVIEW);
+  renderDetailMetricCards("performanceCards", DETAIL_PERFORMANCE);
+  renderDetailStoryCards("designCards", DETAIL_DESIGN);
+}
+
+function openGallery() {
+  openModal("galleryModal");
+  setStatus("Ferrari Galerie wird später ergänzt.");
+}
+
+function toggleCompare() {
+  compareActive = !compareActive;
+  if (human) human.visible = compareActive;
+  document.getElementById("compareBtn").classList.toggle("active", compareActive);
+  setStatus(compareActive ? "Scale reference 1.88 m active." : "Scale reference hidden.");
+}
+
+function rememberMaterial(mesh) {
+  if (!mesh || !mesh.material || materialMemory.has(mesh)) return;
+  materialMemory.set(mesh, { transparent:mesh.material.transparent, opacity:mesh.material.opacity, depthWrite:mesh.material.depthWrite, color:mesh.material.color ? mesh.material.color.clone() : null, roughness:"roughness" in mesh.material ? mesh.material.roughness : null, metalness:"metalness" in mesh.material ? mesh.material.metalness : null });
+}
+
+function restoreInteriorMaterials() {
+  materialMemory.forEach(function(state, mesh) {
+    if (!mesh.material) return;
+    mesh.material.transparent = state.transparent;
+    mesh.material.opacity = state.opacity;
+    mesh.material.depthWrite = state.depthWrite;
+    if (state.color && mesh.material.color) mesh.material.color.copy(state.color);
+    if (state.roughness !== null && "roughness" in mesh.material) mesh.material.roughness = state.roughness;
+    if (state.metalness !== null && "metalness" in mesh.material) mesh.material.metalness = state.metalness;
+    mesh.material.needsUpdate = true;
+  });
+  materialMemory.clear();
+}
+
+function applyInteriorMaterials(active) {
+  if (!active) {
+    restoreInteriorMaterials();
+    removeInteriorLight();
+    return;
+  }
+
+  bodyMeshes.forEach(function(m) {
+    if (!m.material) return;
+    rememberMaterial(m);
+    m.material.transparent = true;
+    m.material.opacity = 0.22;
+    m.material.depthWrite = false;
+    m.material.needsUpdate = true;
+  });
+
+  glassMeshes.forEach(function(m) {
+    if (!m.material) return;
+    rememberMaterial(m);
+    m.material.transparent = true;
+    m.material.opacity = 0.08;
+    m.material.depthWrite = false;
+    if (m.material.color) m.material.color.setHex(0x4c5a68);
+    m.material.needsUpdate = true;
+  });
+
+  darkMeshes.forEach(function(m) {
+    if (!m.material) return;
+    rememberMaterial(m);
+    if (m.material.color) m.material.color.setHex(0x3a424d);
+    if ("roughness" in m.material) m.material.roughness = 0.56;
+    if ("metalness" in m.material) m.material.metalness = 0.05;
+    m.material.needsUpdate = true;
+  });
+
+  addInteriorLight();
+}
+
+
+
+
+let cameraTween = null;
+
+function resetExteriorCameraLimits() {
+  if (!controls) return;
+
+  controls.minDistance = 1.2;
+  controls.maxDistance = 22;
+  controls.maxPolarAngle = Math.PI * 0.495;
+  controls.enablePan = true;
+}
+
+function startCameraTween(snapshot, duration) {
+  if (!snapshot || !camera || !controls) return;
+
+  cameraTween = {
+    startTime: performance.now(),
+    duration: duration || 900,
+    fromPos: camera.position.clone(),
+    toPos: new THREE.Vector3(snapshot.pos.x, snapshot.pos.y, snapshot.pos.z),
+    fromTarget: controls.target.clone(),
+    toTarget: new THREE.Vector3(snapshot.target.x, snapshot.target.y, snapshot.target.z),
+    fromZoom: camera.zoom || 1,
+    toZoom: snapshot.zoom || 1
+  };
+}
+
+function applyCameraSnapshot(snapshot, duration) {
+  if (!snapshot || !camera || !controls) return;
+
+  interiorMode = false;
+  engineHoodMode = false;
+
+  const interiorBtn = document.getElementById("interiorBtn");
+  if (interiorBtn) interiorBtn.classList.remove("active");
+
+  const engineBtn = document.getElementById("engineBtn");
+  if (engineBtn) engineBtn.classList.remove("active");
+
+  applyInteriorMaterials(false);
+
+  controls.minDistance = 2.1;
+  controls.maxDistance = 10;
+
+  if (Math.abs(snapshot.pos.x) < 0.05 && snapshot.pos.y > 6.5 && Math.abs(snapshot.pos.z) < 0.05) {
+    controls.maxPolarAngle = Math.PI;
+  } else {
+    controls.maxPolarAngle = Math.PI * 0.495;
+  }
+
+  cameraTween = {
+    startTime: performance.now(),
+    duration: duration || 950,
+    fromPos: camera.position.clone(),
+    toPos: new THREE.Vector3(snapshot.pos.x, snapshot.pos.y, snapshot.pos.z),
+    fromTarget: controls.target.clone(),
+    toTarget: new THREE.Vector3(snapshot.target.x, snapshot.target.y, snapshot.target.z),
+    fromZoom: camera.zoom || 1,
+    toZoom: snapshot.zoom || 1
+  };
+}
+
+function getCameraSnapshotForView(name) {
+  const preset = cameraPresets[name];
+
+  if (!preset) return null;
+
+  const isMobileView =
+    mobileMode ||
+    window.innerWidth <= 760 ||
+    window.innerHeight > window.innerWidth;
+
+  let snap = JSON.parse(JSON.stringify(preset));
+
+  if (isMobileView) {
+    let scale = 1.0;
+
+    if (name === "home") scale = 3.00;
+    if (name === "front") scale = 1.70;
+    if (name === "rear") scale = 1.70;
+    if (name === "side") scale = 3.00;
+    if (name === "wheel") scale = 1.75;
+    if (name === "top") scale = 1.85;
+
+    const dx = snap.pos.x - snap.target.x;
+    const dy = snap.pos.y - snap.target.y;
+    const dz = snap.pos.z - snap.target.z;
+
+    snap.pos.x = snap.target.x + dx * scale;
+    snap.pos.y = snap.target.y + dy * scale;
+    snap.pos.z = snap.target.z + dz * scale;
+
+    snap.zoom = 1;
+  }
+
+  return { snap:snap, isMobileView:isMobileView };
+}
+
+function setCameraView(name, options) {
+  if (!camera || !controls) return;
+
+  currentCameraView = name || currentCameraView;
+
+  const data = getCameraSnapshotForView(name);
+
+  if (!data) {
+    setStatus(cameraPresetLabel(name) + " is not available.");
+    return;
+  }
+
+  if (!options || !options.keepShowroom) {
+    stopShowroomMode(false);
+  }
+
+  camera.fov = data.isMobileView ? 46 : 38;
+  camera.updateProjectionMatrix();
+
+  applyCameraSnapshot(data.snap, options && options.duration ? options.duration : 950);
+  setStatus(cameraPresetLabel(name) + " activated.");
+}
+
+function cameraPresetLabel(name) {
+  if (name === "home") return "Home";
+  if (name === "front") return "Front";
+  if (name === "side") return "Side";
+  if (name === "rear") return "Rear";
+  if (name === "wheel") return "Wheel";
+  if (name === "top") return "Top";
+  return "View";
+}
+
+function loadCameraPresets() {
+  cameraPresets = {
+    home: {
+      pos: { x:4.95, y:1.95, z:-5.55 },
+      target: { x:0, y:0.92, z:0 },
+      zoom:1
+    },
+
+    front: {
+      pos: { x:0, y:1.08, z:-5.75 },
+      target: { x:0, y:0.76, z:0 },
+      zoom:1
+    },
+
+    side: {
+  pos: { x:-7.35, y:1.22, z:0.00 },
+  target: { x:0.00, y:0.78, z:0.00 },
+  zoom:1
+},
+
+    rear: {
+      pos: { x:0, y:1.08, z:5.75 },
+      target: { x:0, y:0.76, z:0 },
+      zoom:1
+    },
+
+    wheel: {
+  pos: { x:-3.319, y:0.653, z:-2.132 },
+  target: { x:-0.851, y:0.612, z:-1.387 },
+  zoom:1
+},
+    top: {
+      pos: { x:0, y:8.90, z:0.01 },
+      target: { x:0, y:0.58, z:0 },
+      zoom:1
+    }
+  };
+}
+function toggleShowroomMode(force) {
+  const nextState = typeof force === "boolean" ? force : !showroomActive;
+
+  if (nextState) {
+    startShowroomMode();
+  } else {
+    stopShowroomMode(true);
+  }
+}
+
+function startShowroomMode() {
+  if (!camera || !controls) return;
+
+  showroomActive = true;
+  showroomStartTime = performance.now();
+  showroomPhase = "side";
+
+  const btn = document.getElementById("showroomBtn");
+  if (btn) btn.classList.add("active");
+
+  if (autoRotateActive) {
+    autoRotateActive = false;
+    controls.autoRotate = false;
+    const rotateBtn = document.getElementById("autoRotateBtn");
+    if (rotateBtn) rotateBtn.classList.remove("active");
+    saveConfig();
+  }
+
+  if (interiorMode) {
+    interiorMode = false;
+    const interiorBtn = document.getElementById("interiorBtn");
+    if (interiorBtn) interiorBtn.classList.remove("active");
+    applyInteriorMaterials(false);
+  }
+
+  if (engineHoodMode) {
+    engineHoodMode = false;
+    const engineBtn = document.getElementById("engineBtn");
+    if (engineBtn) engineBtn.classList.remove("active");
+  }
+
+  cameraTween = null;
+  camera.fov = (mobileMode || window.innerWidth <= 760 || window.innerHeight > window.innerWidth) ? 47 : 39;
+  camera.updateProjectionMatrix();
+
+  controls.minDistance = 2.1;
+  controls.maxDistance = 16;
+  controls.maxPolarAngle = Math.PI;
+  controls.enablePan = false;
+
+  setStatus("Drone Showroom active: slow 360° side and top view.");
+}
+
+function stopShowroomMode(showStatus) {
+  if (!showroomActive && !showStatus) return;
+
+  showroomActive = false;
+
+  const btn = document.getElementById("showroomBtn");
+  if (btn) btn.classList.remove("active");
+
+  resetExteriorCameraLimits();
+
+  if (showStatus) setStatus("Drone Showroom stopped.");
+}
+
+function updateDroneShowroom() {
+  if (!showroomActive || !camera || !controls) return;
+
+  const now = performance.now();
+  const elapsed = now - showroomStartTime;
+
+  const isMobileView =
+    mobileMode ||
+    window.innerWidth <= 760 ||
+    window.innerHeight > window.innerWidth;
+
+  const target = new THREE.Vector3(0, 0.82, 0);
+  const sideDuration = DRONE_SHOWROOM.sideDuration;
+  const topDuration = DRONE_SHOWROOM.topDuration;
+  const cycleDuration = sideDuration + topDuration;
+  const cycleTime = elapsed % cycleDuration;
+
+  let pos = new THREE.Vector3();
+  let statusText = "";
+
+  if (cycleTime < sideDuration) {
+    showroomPhase = "side";
+
+    const t = cycleTime / sideDuration;
+    const angle = -Math.PI * 0.32 + t * Math.PI * 2.0;
+    const radius = isMobileView ? DRONE_SHOWROOM.radiusMobile : DRONE_SHOWROOM.radiusDesktop;
+    const heightBase = isMobileView ? DRONE_SHOWROOM.heightMobile : DRONE_SHOWROOM.heightDesktop;
+    const height = heightBase + Math.sin(t * Math.PI * 2.0) * 0.32;
+
+    pos.set(
+      Math.cos(angle) * radius,
+      height,
+      Math.sin(angle) * radius
+    );
+
+    statusText = "Drone Showroom: slow side orbit.";
+  } else {
+    showroomPhase = "top";
+
+    const t = (cycleTime - sideDuration) / topDuration;
+    const angle = Math.PI * 0.18 + t * Math.PI * 2.0;
+    const radius = isMobileView ? 3.25 : 2.75;
+    const height = isMobileView ? DRONE_SHOWROOM.topHeightMobile : DRONE_SHOWROOM.topHeightDesktop;
+
+    pos.set(
+      Math.cos(angle) * radius,
+      height,
+      Math.sin(angle) * radius
+    );
+
+    target.set(0, 0.58, 0);
+    statusText = "Drone Showroom: top orbit.";
+  }
+
+  camera.position.lerp(pos, 0.035);
+  controls.target.lerp(target, 0.04);
+  camera.zoom += (1 - (camera.zoom || 1)) * 0.05;
+  camera.updateProjectionMatrix();
+
+  if (Math.floor(elapsed / 1500) !== Math.floor((elapsed - 16) / 1500)) {
+    setStatus(statusText);
+  }
+}
+
+function toggleV12Pulse(force) {
+  const nextState = typeof force === "boolean" ? force : !v12PulseActive;
+
+  if (nextState) {
+    startV12Pulse();
+  } else {
+    stopV12Pulse(true);
+  }
+}
+
+function startV12Pulse() {
+  v12PulseActive = true;
+  pulseStartTime = performance.now();
+
+  const btn = document.getElementById("pulseBtn");
+  if (btn) btn.classList.add("active");
+
+  pulseStateSaved = {
+    exposure: renderer ? renderer.toneMappingExposure : baseExposure,
+    key: keyLight ? keyLight.intensity : null,
+    fill: fillLight ? fillLight.intensity : null,
+    rim: rimLight ? rimLight.intensity : null,
+    hemi: hemiLight ? hemiLight.intensity : null
+  };
+
+  setStatus("V12 Pulse active: subtle showroom light rhythm.");
+}
+
+function stopV12Pulse(showStatus) {
+  v12PulseActive = false;
+
+  const btn = document.getElementById("pulseBtn");
+  if (btn) btn.classList.remove("active");
+
+  if (pulseStateSaved) {
+    if (renderer && typeof pulseStateSaved.exposure === "number") renderer.toneMappingExposure = pulseStateSaved.exposure;
+    if (keyLight && typeof pulseStateSaved.key === "number") keyLight.intensity = pulseStateSaved.key;
+    if (fillLight && typeof pulseStateSaved.fill === "number") fillLight.intensity = pulseStateSaved.fill;
+    if (rimLight && typeof pulseStateSaved.rim === "number") rimLight.intensity = pulseStateSaved.rim;
+    if (hemiLight && typeof pulseStateSaved.hemi === "number") hemiLight.intensity = pulseStateSaved.hemi;
+  }
+
+  pulseStateSaved = null;
+
+  if (showStatus) setStatus("V12 Pulse stopped.");
+}
+
+function updateV12Pulse() {
+  if (!v12PulseActive) return;
+
+  const isLight = document.body.classList.contains("light");
+  const base = isLight
+    ? { exposure:1.02, key:2.55, fill:0.90, rim:1.18, hemi:1.00 }
+    : { exposure:0.94, key:2.15, fill:0.58, rim:1.05, hemi:0.82 };
+
+  const t = (performance.now() - pulseStartTime) / 1000;
+  const heartbeat =
+    Math.pow(Math.max(0, Math.sin(t * Math.PI * 2.0)), 8) * 0.65 +
+    Math.pow(Math.max(0, Math.sin((t + 0.18) * Math.PI * 2.0)), 10) * 0.35;
+
+  const pulse = heartbeat * 0.16;
+
+  if (renderer) renderer.toneMappingExposure = base.exposure + pulse * 0.18;
+  if (keyLight) keyLight.intensity = base.key + pulse * 1.15;
+  if (fillLight) fillLight.intensity = base.fill + pulse * 0.45;
+  if (rimLight) rimLight.intensity = base.rim + pulse * 0.72;
+  if (hemiLight) hemiLight.intensity = base.hemi + pulse * 0.20;
+}
+
+function toggleEngineHoodFocus(force) {
+  if (!camera || !controls) return;
+
+  const nextState = typeof force === "boolean" ? force : !engineHoodMode;
+
+  if (nextState) startEngineHoodFocus();
+  else stopEngineHoodFocus(true);
+}
+
+function startEngineHoodFocus() {
+  if (!camera || !controls) return;
+
+  stopShowroomMode(false);
+
+  if (interiorMode) {
+    interiorMode = false;
+    const interiorBtn = document.getElementById("interiorBtn");
+    if (interiorBtn) interiorBtn.classList.remove("active");
+    applyInteriorMaterials(false);
+  }
+
+  if (!engineHoodMode) {
+    savedEngineCamera = {
+      pos: camera.position.clone(),
+      target: controls.target.clone(),
+      min: controls.minDistance,
+      max: controls.maxDistance,
+      polar: controls.maxPolarAngle,
+      zoom: camera.zoom || 1,
+      fov: camera.fov
+    };
+  }
+
+  engineHoodMode = true;
+  currentCameraView = "engine";
+
+  const engineBtn = document.getElementById("engineBtn");
+  if (engineBtn) engineBtn.classList.add("active");
+
+  controls.minDistance = 0.8;
+  controls.maxDistance = 6.5;
+  controls.maxPolarAngle = Math.PI * 0.58;
+  controls.enablePan = false;
+
+  const isMobileView = mobileMode || window.innerWidth <= 760 || window.innerHeight > window.innerWidth;
+  camera.fov = isMobileView ? 42 : 34;
+  camera.updateProjectionMatrix();
+
+  cameraTween = {
+    startTime: performance.now(),
+    duration: 2200,
+    fromPos: camera.position.clone(),
+    toPos: isMobileView ? new THREE.Vector3(1.55, 1.55, -3.45) : new THREE.Vector3(1.25, 1.42, -2.85),
+    fromTarget: controls.target.clone(),
+    toTarget: new THREE.Vector3(0.15, 0.78, -0.62),
+    fromZoom: camera.zoom || 1,
+    toZoom: 1
+  };
+
+  setStatus("Engine hood focus active: original colors and front V12 presence.");
+}
+
+function stopEngineHoodFocus(showStatus) {
+  if (!engineHoodMode && !showStatus) return;
+
+  engineHoodMode = false;
+
+  const engineBtn = document.getElementById("engineBtn");
+  if (engineBtn) engineBtn.classList.remove("active");
+
+  controls.enablePan = true;
+
+  if (savedEngineCamera && camera && controls) {
+    controls.minDistance = savedEngineCamera.min || 2.1;
+    controls.maxDistance = savedEngineCamera.max || 10;
+    controls.maxPolarAngle = savedEngineCamera.polar || Math.PI * 0.495;
+    camera.fov = savedEngineCamera.fov || 38;
+    camera.updateProjectionMatrix();
+
+    cameraTween = {
+      startTime: performance.now(),
+      duration: 1500,
+      fromPos: camera.position.clone(),
+      toPos: savedEngineCamera.pos.clone(),
+      fromTarget: controls.target.clone(),
+      toTarget: savedEngineCamera.target.clone(),
+      fromZoom: camera.zoom || 1,
+      toZoom: savedEngineCamera.zoom || 1
+    };
+  }
+
+  savedEngineCamera = null;
+  if (showStatus) setStatus("Engine hood focus stopped.");
+}
+
+function toggleInteriorMode() {
+  if (!camera || !controls) return;
+
+  stopShowroomMode(false);
+  if (!interiorMode && engineHoodMode) stopEngineHoodFocus(false);
+  interiorMode = !interiorMode;
+  if (interiorMode) currentCameraView = "interior";
+
+  const interiorBtn = document.getElementById("interiorBtn");
+  if (interiorBtn) interiorBtn.classList.toggle("active", interiorMode);
+
+  if (interiorMode) {
+    savedInteriorCamera = {
+      pos: camera.position.clone(),
+      target: controls.target.clone(),
+      min: controls.minDistance,
+      max: controls.maxDistance,
+      polar: controls.maxPolarAngle,
+      zoom: camera.zoom || 1
+    };
+
+    controls.minDistance = 0.28;
+    controls.maxDistance = 2.8;
+    controls.maxPolarAngle = Math.PI * 0.70;
+
+    applyInteriorMaterials(true);
+
+    cameraTween = {
+      startTime: performance.now(),
+      duration: 2200,
+      fromPos: camera.position.clone(),
+
+      // weiter nach vorne und deutlich mittiger
+      toPos: new THREE.Vector3(0.00, 1.34, 1.42),
+
+      fromTarget: controls.target.clone(),
+
+      // Ziel direkt Richtung Cockpit-Mitte / Mittelkonsole
+      toTarget: new THREE.Vector3(0.00, 0.90, -0.18),
+
+      fromZoom: camera.zoom || 1,
+      toZoom: 1
+    };
+
+    setStatus("Interior focus active: smooth cockpit move.");
+  } else {
+    applyInteriorMaterials(false);
+
+    if (savedInteriorCamera) {
+      controls.minDistance = savedInteriorCamera.min || 2.1;
+      controls.maxDistance = savedInteriorCamera.max || 10;
+      controls.maxPolarAngle = savedInteriorCamera.polar || Math.PI * 0.495;
+
+      cameraTween = {
+        startTime: performance.now(),
+        duration: 1500,
+        fromPos: camera.position.clone(),
+        toPos: savedInteriorCamera.pos.clone(),
+        fromTarget: controls.target.clone(),
+        toTarget: savedInteriorCamera.target.clone(),
+        fromZoom: camera.zoom || 1,
+        toZoom: savedInteriorCamera.zoom || 1
+      };
+    } else {
+      controls.minDistance = 2.1;
+      controls.maxDistance = 10;
+      controls.maxPolarAngle = Math.PI * 0.495;
+
+      cameraTween = {
+        startTime: performance.now(),
+        duration: 1500,
+        fromPos: camera.position.clone(),
+        toPos: new THREE.Vector3(4.95, 1.95, 5.55),
+        fromTarget: controls.target.clone(),
+        toTarget: new THREE.Vector3(0, 0.92, 0),
+        fromZoom: camera.zoom || 1,
+        toZoom: 1
+      };
+    }
+
+    setStatus("Exterior focus active.");
+  }
+}
+
+function openDetailsSheet(tab) {
+  renderDetailsContent();
+  renderInfoPanel();
+  openModal("detailsSheet");
+  setDetailsTab(tab || "overview");
+  const btn = document.getElementById("detailsBtn");
+  if (btn) btn.classList.add("active");
+  setStatus("Ferrari Details opened.");
+}
+
+function closeDetailsSheet() {
+  closeModal("detailsSheet");
+  const btn = document.getElementById("detailsBtn");
+  if (btn) btn.classList.remove("active");
+}
+
+function setDetailsTab(tab) {
+  const activeTab = tab || "overview";
+  const names = ["overview", "performance", "design", "facts"];
+
+  names.forEach(function(name) {
+    const tabEl = document.getElementById(name + "Tab");
+    const paneEl = document.getElementById(name + "Pane");
+    if (tabEl) tabEl.classList.toggle("active", name === activeTab);
+    if (paneEl) paneEl.classList.toggle("active", name === activeTab);
+  });
+
+  if (activeTab === "facts") renderInfoPanel();
+}
+
+function openInfoPanel() {
+  openDetailsSheet("facts");
+}
+
+function closeInfoPanel() {
+  closeDetailsSheet();
+}
+
+function renderInfoPanel() {
+  const visualTitle = document.getElementById("infoVisualTitle");
+  const visualText = document.getElementById("infoVisualText");
+  const factList = document.getElementById("infoFactList");
+
+  if (visualTitle) visualTitle.textContent = "V12-Showcar";
+  if (visualText) visualText.textContent = "Nur ein Auto, ein klarer Look und weniger Ablenkung: So schaffen wir die Basis für mehr Realismus.";
+  if (factList) {
+    factList.innerHTML = INFO_FACTS.map(function(item) {
+      return '<article class="infoFactCard"><div class="infoFactIcon">' + infoIconSvg(item.icon) + '</div><div><div class="infoFactKicker">' + escapeHtml(item.value) + '</div><div class="infoFactTitle">' + escapeHtml(item.title) + '</div><div class="infoFactText">' + escapeHtml(item.text) + '</div></div></article>';
+    }).join("");
+  }
+}
+
+function infoIconSvg(type) {
+  const icons = {
+    engine:'<svg viewBox="0 0 24 24"><path d="M4 10h3l2-3h6l2 3h3v8H4z"/><path d="M9 7V4h6v3M20 13h2M2 13h2"/></svg>',
+    speed:'<svg viewBox="0 0 24 24"><path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l5-5"/><path d="M6 18h12"/></svg>',
+    weight:'<svg viewBox="0 0 24 24"><path d="M6 8h12l2 12H4z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>',
+    track:'<svg viewBox="0 0 24 24"><path d="M5 18c4-1 5-11 10-10 4 1 5 6 1 8-3 2-4-3-1-4"/><path d="M4 21h16"/></svg>',
+    aero:'<svg viewBox="0 0 24 24"><path d="M3 12h14"/><path d="M13 7l5 5-5 5"/><path d="M4 7h5M4 17h5"/></svg>',
+    price:'<svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M17 7c-1-2-8-2-8 1 0 4 8 1 8 6 0 3-7 3-9 1"/></svg>'
+  };
+  return icons[type] || icons.engine;
+}
+
+
+function initHotspots() {
+  const layer = document.getElementById("hotspotLayer");
+  if (!layer) return;
+
+  layer.innerHTML = "";
+  hotspotElements = HOTSPOT_DATA.map(function(item) {
+    const card = document.createElement("article");
+    card.className = "hotspotInfo";
+    card.dataset.hotspotId = item.id;
+    card.innerHTML =
+      '<div class="hotspotKicker">' + escapeHtml(item.kicker) + '</div>' +
+      '<div class="hotspotTitle">' + escapeHtml(item.title) + '</div>' +
+      '<div class="hotspotText">' + escapeHtml(item.text) + '</div>';
+    layer.appendChild(card);
+    return { data:item, el:card, score:0 };
+  });
+
+  layer.setAttribute("aria-hidden", "true");
+}
+
+function updateHotspotAnchors() {
+  // View Cards intentionally stay in one fixed UI position.
+  // They do not follow fragile 3D points, so car coordinates and dimensions remain untouched.
+}
+
+function hotspotIdForView(name) {
+  const map = {
+    home:"overview",
+    front:"engine",
+    side:"aero",
+    rear:"rear",
+    wheel:"wheel",
+    top:"cockpit",
+    interior:"cockpit"
+  };
+  return map[name] || "overview";
+}
+
+function showViewCard(viewName) {
+  activeHotspotId = hotspotIdForView(viewName || currentCameraView || "home");
+  updateHotspots();
+}
+
+function toggleHotspots(force) {
+  setStatus("View Cards removed. Clean UI active.");
+  return;
+  const nextState = typeof force === "boolean" ? force : !hotspotsActive;
+  hotspotsActive = nextState;
+
+  const layer = document.getElementById("hotspotLayer");
+  const btn = document.getElementById("hotspotsBtn");
+
+  if (layer) layer.setAttribute("aria-hidden", hotspotsActive ? "false" : "true");
+  if (btn) btn.classList.toggle("active", hotspotsActive);
+
+  if (hotspotsActive) {
+    showViewCard(currentCameraView || "home");
+  } else {
+    activeHotspotId = null;
+    updateHotspots();
+  }
+
+  setStatus(hotspotsActive ? "View Card active: select a camera view to update the card." : "View Card hidden.");
+}
+
+function openHotspotCard(id) {
+  activeHotspotId = id || activeHotspotId || hotspotIdForView(currentCameraView);
+  updateHotspots();
+}
+
+function closeHotspotCard() {
+  activeHotspotId = null;
+  updateHotspots();
+}
+
+function positionHotspotCard(id) {
+  return;
+}
+
+function updateHotspots() {
+  return;
+  if (!hotspotElements.length) return;
+
+  if (!hotspotsActive || document.body.classList.contains("intro-active")) {
+    hotspotElements.forEach(function(entry) {
+      entry.el.classList.remove("visible", "featured", "dimmed");
+    });
+    return;
+  }
+
+  const focusId = activeHotspotId || hotspotIdForView(currentCameraView);
+  lastFocusHotspotId = focusId;
+
+  hotspotElements.forEach(function(entry) {
+    const isBest = entry.data.id === focusId;
+    entry.el.classList.toggle("visible", isBest);
+    entry.el.classList.toggle("featured", isBest);
+    entry.el.classList.toggle("dimmed", !isBest);
+  });
+}
+
+function syncAdaptiveLayout() {
+  const w = window.innerWidth || 0;
+  const h = window.innerHeight || 0;
+  const isPhone = w <= 640;
+  const isTablet = w > 640 && w <= 1024;
+  const isDesktop = w > 1024;
+  const isLandscape = w > h;
+  const compact = h < 760 || w < 900;
+
+  document.body.classList.toggle("phone-ui", isPhone);
+  document.body.classList.toggle("tablet-ui", isTablet);
+  document.body.classList.toggle("desktop-ui", isDesktop);
+  document.body.classList.toggle("landscape-ui", isLandscape);
+  document.body.classList.toggle("compact-ui", compact);
+}
+
+function toggleTheme() {
+  const light = !document.body.classList.contains("light");
+
+  document.body.classList.toggle("light", light);
+  document.getElementById("themeBtn").classList.toggle("active", light);
+
+  updateSceneTheme(light);
+
+  setStatus(light ? "Light mode active." : "Dark mode active.");
+  saveConfig();
+}
+
+function toggleFullscreen() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) { if (el.requestFullscreen) el.requestFullscreen(); }
+  else { if (document.exitFullscreen) document.exitFullscreen(); }
+}
+function syncFullscreenButton() {
+  const btn = document.getElementById("fullscreenBtn");
+  if (btn) btn.classList.toggle("active", !!document.fullscreenElement);
+}
+
+function toggleMoreMenu() {
+  const panel = document.getElementById("morePanel");
+  const btn = document.getElementById("moreBtn");
+  if (!panel) return;
+  const open = !panel.classList.contains("open");
+  panel.classList.toggle("open", open);
+  if (btn) btn.classList.toggle("active", open);
+}
+
+function closeMoreMenu() {
+  const panel = document.getElementById("morePanel");
+  const btn = document.getElementById("moreBtn");
+  if (panel) panel.classList.remove("open");
+  if (btn) btn.classList.remove("active");
+}
+
+function hideDock() {
+  document.body.classList.add("ui-hidden");
+  const showBtn = document.getElementById("showDockBtn");
+  if (showBtn) showBtn.style.display = "block";
+}
+
+function showDock() {
+  document.body.classList.remove("ui-hidden");
+  const showBtn = document.getElementById("showDockBtn");
+  if (showBtn) showBtn.style.display = "none";
+}
+
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "grid";
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "none";
+}
+
+function backdropClose(ev, id) {
+  if (ev.target.id === id) {
+    if (id === "detailsSheet") closeDetailsSheet();
+    else closeModal(id);
+  }
+}
+function showLoading(active) { document.getElementById("loading").classList.toggle("hidden", !active); document.getElementById("error").classList.add("hidden"); }
+function showError(message) { document.getElementById("loading").classList.add("hidden"); document.getElementById("error").classList.remove("hidden"); document.getElementById("errorText").textContent = message || "Unbekannter Fehler."; }
+function setStatus(text) { const s = document.getElementById("status"); if (s) s.textContent = text; }
+
+function onResize() {
+  const viewer = document.getElementById("viewer");
+  const w = viewer.clientWidth || window.innerWidth;
+  const h = viewer.clientHeight || window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+}
+
+function updateCameraTween() {
+  if (!cameraTween || !camera || !controls) return;
+
+  const now = performance.now();
+  const t = Math.min(1, (now - cameraTween.startTime) / cameraTween.duration);
+  const eased = 1 - Math.pow(1 - t, 3);
+
+  camera.position.lerpVectors(cameraTween.fromPos, cameraTween.toPos, eased);
+  controls.target.lerpVectors(cameraTween.fromTarget, cameraTween.toTarget, eased);
+  camera.zoom = cameraTween.fromZoom + (cameraTween.toZoom - cameraTween.fromZoom) * eased;
+  camera.updateProjectionMatrix();
+
+  if (t >= 1) {
+    cameraTween = null;
+  }
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (human && compareActive) {
+    const label = human.getObjectByName("heightLabel");
+    if (label) label.quaternion.copy(camera.quaternion);
+  }
+  updateCameraTween();
+  updateDroneShowroom();
+  updateV12Pulse();
+
+if (controls) controls.update();
+updateHotspots();
+if (renderer && scene && camera) renderer.render(scene, camera);
+}
+
+function toggleMobileMode() {
+  mobileMode = !mobileMode;
+  document.body.classList.toggle("mobile-ui", mobileMode);
+  document.getElementById("mobileBtn").classList.toggle("active", mobileMode);
+  if (renderer) renderer.setPixelRatio(mobileMode ? Math.min(window.devicePixelRatio || 1, 1.35) : Math.min(window.devicePixelRatio || 1, 1.8));
+  if (controls) { controls.rotateSpeed = mobileMode ? 0.48 : 0.62; controls.zoomSpeed = mobileMode ? 0.65 : 0.8; }
+  onResize();
+  saveConfig();
+  setStatus(mobileMode ? "Mobile quality mode active." : "Standard quality mode active.");
+}
+
+function autoEnableMobileModeIfNeeded() {
+  const isPhone = window.innerWidth <= 760 || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
+  if (isPhone && !mobileMode) {
+    mobileMode = true;
+    document.body.classList.add("mobile-ui");
+    const btn = document.getElementById("mobileBtn");
+    if (btn) btn.classList.add("active");
+    if (controls) { controls.rotateSpeed = 0.48; controls.zoomSpeed = 0.65; }
+    if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
+    saveConfig();
+  }
+}
+
+function toggleAutoRotate() {
+  stopShowroomMode(false);
+  autoRotateActive = !autoRotateActive;
+  document.getElementById("autoRotateBtn").classList.toggle("active", autoRotateActive);
+  if (controls) { controls.autoRotate = autoRotateActive; controls.autoRotateSpeed = 0.85; }
+  saveConfig();
+  setStatus(autoRotateActive ? "Auto rotation active." : "Auto rotation inactive.");
+}
+
+function saveConfig() {
+  try {
+    const cfg = { theme:document.body.classList.contains("light") ? "light" : "dark", mobile:!!mobileMode, rotate:!!autoRotateActive };
+    localStorage.setItem(ZENITH_STORAGE_KEY, JSON.stringify(cfg));
+  } catch(e) {}
+}
+
+function readSavedConfig() {
+  try { return JSON.parse(localStorage.getItem(ZENITH_STORAGE_KEY) || "{}"); }
+  catch(e) { return {}; }
+}
+
+function loadConfigBeforeInit() {
+  const cfg = readSavedConfig();
+  if (cfg.theme === "light") document.body.classList.add("light");
+  if (cfg.mobile === true) { mobileMode = true; document.body.classList.add("mobile-ui"); }
+  autoRotateActive = !!cfg.rotate;
+}
+
+function applyConfigAfterInit() {
+  const mobileBtn = document.getElementById("mobileBtn");
+  if (mobileBtn) mobileBtn.classList.toggle("active", mobileMode);
+  const rotateBtn = document.getElementById("autoRotateBtn");
+  if (rotateBtn) rotateBtn.classList.toggle("active", autoRotateActive);
+  const themeBtn = document.getElementById("themeBtn");
+  if (themeBtn) themeBtn.classList.toggle("active", document.body.classList.contains("light"));
+  if (controls) { controls.autoRotate = autoRotateActive; controls.autoRotateSpeed = 0.85; controls.rotateSpeed = mobileMode ? 0.48 : 0.62; controls.zoomSpeed = mobileMode ? 0.65 : 0.8; }
+  if (renderer) renderer.setPixelRatio(mobileMode ? Math.min(window.devicePixelRatio || 1, 1.35) : Math.min(window.devicePixelRatio || 1, 1.8));
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
