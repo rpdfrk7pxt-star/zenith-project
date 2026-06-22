@@ -2033,22 +2033,22 @@ window.addEventListener("load", function() {
 });
 
 function buildStudioEnvironment() {
-  // Erzeugt eine kleine "Studio"-Szene (Boden + heller Himmel + zwei Soft-Light-Panels)
-  // und nutzt sie via PMREMGenerator als Environment Map, damit Lack, Felgen und
-  // Glas echte Reflexionen statt eines flachen Looks bekommen.
+  // Erzeugt eine helle, neutrale "Studio"-Umgebung nur für Reflexionen/Glanzlichter.
+  // Bewusst hell und einfach gehalten, damit sie die eigentliche Szenenbeleuchtung
+  // nicht überlagert oder abdunkelt.
   const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileEquirectangularShader();
 
   const envScene = new THREE.Scene();
 
   const isLight = document.body.classList.contains("light");
-  const skyTop = isLight ? 0xf5f8fc : 0x14181f;
-  const skyBottom = isLight ? 0xcfd8e3 : 0x05060a;
+  const skyTop = isLight ? 0xffffff : 0x9aa3b5;
+  const skyBottom = isLight ? 0xd7dee8 : 0x3a3f4a;
 
-  // Vertikaler Gradient als "Himmel"-Kugel
+  // Vertikaler Gradient als "Himmel"-Kugel (DoubleSide, damit nichts schwarz bleibt)
   const skyGeo = new THREE.SphereGeometry(24, 32, 32);
   const skyMat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
+    side: THREE.DoubleSide,
     uniforms: {
       topColor: { value: new THREE.Color(skyTop) },
       bottomColor: { value: new THREE.Color(skyBottom) }
@@ -2058,27 +2058,19 @@ function buildStudioEnvironment() {
   });
   envScene.add(new THREE.Mesh(skyGeo, skyMat));
 
-  // Zwei helle "Softbox"-Panels links/rechts -> sorgen für saubere Lichtstreifen auf Lack & Felgen
-  const panelMat1 = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const panel1 = new THREE.Mesh(new THREE.PlaneGeometry(6, 10), panelMat1);
-  panel1.position.set(-9, 3, 2);
-  panel1.lookAt(0, 1, 0);
+  // Helle Softbox-Streifen (DoubleSide, kein lookAt-Risiko) für klare Glanzlichter auf Lack/Felgen
+  const panelMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  const panel1 = new THREE.Mesh(new THREE.PlaneGeometry(8, 14), panelMat);
+  panel1.position.set(-10, 4, 0);
+  panel1.rotation.y = Math.PI / 2;
   envScene.add(panel1);
 
-  const panelMat2 = new THREE.MeshBasicMaterial({ color: 0xdfe6f2 });
-  const panel2 = new THREE.Mesh(new THREE.PlaneGeometry(5, 8), panelMat2);
-  panel2.position.set(8, 2.5, -3);
-  panel2.lookAt(0, 1, 0);
+  const panel2 = new THREE.Mesh(new THREE.PlaneGeometry(8, 14), panelMat);
+  panel2.position.set(10, 4, 0);
+  panel2.rotation.y = -Math.PI / 2;
   envScene.add(panel2);
 
-  // Bodenscheibe (dunkel, leicht reflektiv im Eindruck) -> realistische untere Spiegelung
-  const floorMat = new THREE.MeshBasicMaterial({ color: isLight ? 0xb9c2cf : 0x0a0c10 });
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(20, 32), floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -2;
-  envScene.add(floor);
-
-  const envRT = pmrem.fromScene(envScene, 0.04);
+  const envRT = pmrem.fromScene(envScene, 0.06);
   scene.environment = envRT.texture;
 
   pmrem.dispose();
