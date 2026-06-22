@@ -7,6 +7,16 @@
   <meta name="theme-color" content="#07080c">
   <title>Zenith Project — Ferrari 812 GTS</title>
 
+  <!-- PWA: Manifest + Icons -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zenith">
+  <meta name="mobile-web-app-capable" content="yes">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -3865,6 +3875,15 @@ function applyConfigAfterInit() {
 
 function escapeHtml(value) {
   return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+
+// PWA: Service Worker registrieren (Offline-Caching der App-Shell, Three.js-Libs und des GLB-Modells)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function() {
+    navigator.serviceWorker.register("./sw.js").catch(function(err) {
+      console.warn("Service Worker Registrierung fehlgeschlagen:", err);
+    });
+  });
 }
 </script>
 </body>
