@@ -2032,50 +2032,6 @@ window.addEventListener("load", function() {
   }
 });
 
-function buildStudioEnvironment() {
-  // Erzeugt eine helle, neutrale "Studio"-Umgebung nur für Reflexionen/Glanzlichter.
-  // Bewusst hell und einfach gehalten, damit sie die eigentliche Szenenbeleuchtung
-  // nicht überlagert oder abdunkelt.
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-
-  const envScene = new THREE.Scene();
-
-  const isLight = document.body.classList.contains("light");
-  const skyTop = isLight ? 0xffffff : 0x9aa3b5;
-  const skyBottom = isLight ? 0xd7dee8 : 0x3a3f4a;
-
-  // Vertikaler Gradient als "Himmel"-Kugel (DoubleSide, damit nichts schwarz bleibt)
-  const skyGeo = new THREE.SphereGeometry(24, 32, 32);
-  const skyMat = new THREE.ShaderMaterial({
-    side: THREE.DoubleSide,
-    uniforms: {
-      topColor: { value: new THREE.Color(skyTop) },
-      bottomColor: { value: new THREE.Color(skyBottom) }
-    },
-    vertexShader: "varying vec3 vPos; void main(){ vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
-    fragmentShader: "varying vec3 vPos; uniform vec3 topColor; uniform vec3 bottomColor; void main(){ float t = clamp(normalize(vPos).y * 0.5 + 0.5, 0.0, 1.0); gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0); }"
-  });
-  envScene.add(new THREE.Mesh(skyGeo, skyMat));
-
-  // Helle Softbox-Streifen (DoubleSide, kein lookAt-Risiko) für klare Glanzlichter auf Lack/Felgen
-  const panelMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-  const panel1 = new THREE.Mesh(new THREE.PlaneGeometry(8, 14), panelMat);
-  panel1.position.set(-10, 4, 0);
-  panel1.rotation.y = Math.PI / 2;
-  envScene.add(panel1);
-
-  const panel2 = new THREE.Mesh(new THREE.PlaneGeometry(8, 14), panelMat);
-  panel2.position.set(10, 4, 0);
-  panel2.rotation.y = -Math.PI / 2;
-  envScene.add(panel2);
-
-  const envRT = pmrem.fromScene(envScene, 0.06);
-  scene.environment = envRT.texture;
-
-  pmrem.dispose();
-}
-
 function init() {
   const viewer = document.getElementById("viewer");
   const w = viewer.clientWidth || window.innerWidth;
@@ -2099,8 +2055,6 @@ renderer.physicallyCorrectLights = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 viewer.appendChild(renderer.domElement);
-
-buildStudioEnvironment();
 
 controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -2259,8 +2213,6 @@ function updateSceneTheme(isLight) {
     scene.fog.color = new THREE.Color(isLight ? 0xe9eff6 : 0x07080c);
     scene.fog.density = isLight ? 0.018 : 0.026;
   }
-
-  if (renderer) buildStudioEnvironment();
 
   baseExposure = isLight ? 1.02 : 0.94;
 
@@ -2786,12 +2738,11 @@ function applyMaterialTuning() {
     const old = m.material || {};
     const mat = new THREE.MeshPhysicalMaterial({
       color:FERRARI_RED,
-      roughness:0.12,
-      metalness:0.55,
+      roughness:0.16,
+      metalness:0.06,
       clearcoat:1.0,
-      clearcoatRoughness:0.045,
-      reflectivity:0.5,
-      envMapIntensity:1.35
+      clearcoatRoughness:0.04,
+      reflectivity:0.85,
     });
 
     copyMaps(mat, old);
@@ -2808,7 +2759,6 @@ function applyMaterialTuning() {
       opacity:0.78,
       clearcoat:1,
       reflectivity:0.85,
-      envMapIntensity:1.2
     });
 
     copyMaps(mat, old);
@@ -2821,7 +2771,6 @@ function applyMaterialTuning() {
       color:0x1c1f24,
       roughness:0.58,
       metalness:0.12,
-      envMapIntensity:0.6
     });
 
     copyMaps(mat, old);
@@ -2834,7 +2783,6 @@ function applyMaterialTuning() {
       color:0x0a0b0d,
       roughness:0.88,
       metalness:0.0,
-      envMapIntensity:0.25
     });
 
     copyMaps(mat, old);
@@ -2845,9 +2793,8 @@ function applyMaterialTuning() {
     const old = m.material || {};
     const mat = new THREE.MeshStandardMaterial({
       color:0x9aa1ab,
-      roughness:0.16,
-      metalness:0.95,
-      envMapIntensity:1.4
+      roughness:0.22,
+      metalness:0.75,
     });
 
     copyMaps(mat, old);
@@ -2858,9 +2805,8 @@ function applyMaterialTuning() {
     const old = m.material || {};
     const mat = new THREE.MeshStandardMaterial({
       color:0x4a4540,
-      roughness:0.62,
-      metalness:0.78,
-      envMapIntensity:0.9
+      roughness:0.55,
+      metalness:0.55,
     });
 
     copyMaps(mat, old);
@@ -2873,7 +2819,6 @@ function applyMaterialTuning() {
       color:0xc81e2c,
       roughness:0.38,
       metalness:0.32,
-      envMapIntensity:0.7
     });
 
     copyMaps(mat, old);
