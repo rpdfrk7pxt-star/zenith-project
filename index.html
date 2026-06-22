@@ -1993,6 +1993,7 @@ let wheelMeshes = [];
 let tireMeshes = [];
 let rimMeshes = [];
 let brakeMeshes = [];
+let caliperMeshes = [];
 let metalMeshes = [];
 let human = null;
 let compareActive = false;
@@ -2031,6 +2032,58 @@ window.addEventListener("load", function() {
   }
 });
 
+function buildStudioEnvironment() {
+  // Erzeugt eine kleine "Studio"-Szene (Boden + heller Himmel + zwei Soft-Light-Panels)
+  // und nutzt sie via PMREMGenerator als Environment Map, damit Lack, Felgen und
+  // Glas echte Reflexionen statt eines flachen Looks bekommen.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+
+  const envScene = new THREE.Scene();
+
+  const isLight = document.body.classList.contains("light");
+  const skyTop = isLight ? 0xf5f8fc : 0x14181f;
+  const skyBottom = isLight ? 0xcfd8e3 : 0x05060a;
+
+  // Vertikaler Gradient als "Himmel"-Kugel
+  const skyGeo = new THREE.SphereGeometry(24, 32, 32);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: {
+      topColor: { value: new THREE.Color(skyTop) },
+      bottomColor: { value: new THREE.Color(skyBottom) }
+    },
+    vertexShader: "varying vec3 vPos; void main(){ vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+    fragmentShader: "varying vec3 vPos; uniform vec3 topColor; uniform vec3 bottomColor; void main(){ float t = clamp(normalize(vPos).y * 0.5 + 0.5, 0.0, 1.0); gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0); }"
+  });
+  envScene.add(new THREE.Mesh(skyGeo, skyMat));
+
+  // Zwei helle "Softbox"-Panels links/rechts -> sorgen für saubere Lichtstreifen auf Lack & Felgen
+  const panelMat1 = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const panel1 = new THREE.Mesh(new THREE.PlaneGeometry(6, 10), panelMat1);
+  panel1.position.set(-9, 3, 2);
+  panel1.lookAt(0, 1, 0);
+  envScene.add(panel1);
+
+  const panelMat2 = new THREE.MeshBasicMaterial({ color: 0xdfe6f2 });
+  const panel2 = new THREE.Mesh(new THREE.PlaneGeometry(5, 8), panelMat2);
+  panel2.position.set(8, 2.5, -3);
+  panel2.lookAt(0, 1, 0);
+  envScene.add(panel2);
+
+  // Bodenscheibe (dunkel, leicht reflektiv im Eindruck) -> realistische untere Spiegelung
+  const floorMat = new THREE.MeshBasicMaterial({ color: isLight ? 0xb9c2cf : 0x0a0c10 });
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(20, 32), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -2;
+  envScene.add(floor);
+
+  const envRT = pmrem.fromScene(envScene, 0.04);
+  scene.environment = envRT.texture;
+
+  pmrem.dispose();
+}
+
 function init() {
   const viewer = document.getElementById("viewer");
   const w = viewer.clientWidth || window.innerWidth;
@@ -2054,6 +2107,8 @@ renderer.physicallyCorrectLights = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 viewer.appendChild(renderer.domElement);
+
+buildStudioEnvironment();
 
 controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -2212,6 +2267,8 @@ function updateSceneTheme(isLight) {
     scene.fog.color = new THREE.Color(isLight ? 0xe9eff6 : 0x07080c);
     scene.fog.density = isLight ? 0.018 : 0.026;
   }
+
+  if (renderer) buildStudioEnvironment();
 
   baseExposure = isLight ? 1.02 : 0.94;
 
@@ -2622,6 +2679,7 @@ wheelMeshes = [];
 tireMeshes = [];
 rimMeshes = [];
 brakeMeshes = [];
+caliperMeshes = [];
 metalMeshes = [];
   if (!carGroup) return;
   while (carGroup.children.length) carGroup.remove(carGroup.children[0]);
@@ -2682,7 +2740,13 @@ function classifyModel(root) {
       return;
     }
 
-    if (/brake|disc|rotor|caliper|bremse/.test(name)) {
+    if (/caliper|bremssattel|brembo/.test(name)) {
+      caliperMeshes.push(o);
+      wheelMeshes.push(o);
+      return;
+    }
+
+    if (/brake|disc|rotor|bremse/.test(name)) {
       brakeMeshes.push(o);
       wheelMeshes.push(o);
       return;
@@ -2730,11 +2794,12 @@ function applyMaterialTuning() {
     const old = m.material || {};
     const mat = new THREE.MeshPhysicalMaterial({
       color:FERRARI_RED,
-      roughness:0.20,
-      metalness:0.03,
+      roughness:0.12,
+      metalness:0.55,
       clearcoat:1.0,
-      clearcoatRoughness:0.02,
-      reflectivity:0.98
+      clearcoatRoughness:0.045,
+      reflectivity:0.5,
+      envMapIntensity:1.35
     });
 
     copyMaps(mat, old);
@@ -2744,13 +2809,14 @@ function applyMaterialTuning() {
   glassMeshes.forEach(function(m) {
     const old = m.material || {};
     const mat = new THREE.MeshPhysicalMaterial({
-      color:0x17202a,
-      roughness:0.025,
+      color:0x10161d,
+      roughness:0.04,
       metalness:0.00,
       transparent:true,
-      opacity:0.30,
+      opacity:0.78,
       clearcoat:1,
-      reflectivity:0.92
+      reflectivity:0.85,
+      envMapIntensity:1.2
     });
 
     copyMaps(mat, old);
@@ -2760,9 +2826,10 @@ function applyMaterialTuning() {
   darkMeshes.forEach(function(m) {
     const old = m.material || {};
     const mat = new THREE.MeshStandardMaterial({
-      color:0x2b313a,
-      roughness:0.64,
-      metalness:0.05
+      color:0x1c1f24,
+      roughness:0.58,
+      metalness:0.12,
+      envMapIntensity:0.6
     });
 
     copyMaps(mat, old);
@@ -2772,9 +2839,10 @@ function applyMaterialTuning() {
   tireMeshes.forEach(function(m) {
     const old = m.material || {};
     const mat = new THREE.MeshStandardMaterial({
-      color:0x0b0d10,
-      roughness:0.94,
-      metalness:0.01
+      color:0x0a0b0d,
+      roughness:0.88,
+      metalness:0.0,
+      envMapIntensity:0.25
     });
 
     copyMaps(mat, old);
@@ -2784,9 +2852,10 @@ function applyMaterialTuning() {
   rimMeshes.forEach(function(m) {
     const old = m.material || {};
     const mat = new THREE.MeshStandardMaterial({
-      color:0x626a75,
-      roughness:0.24,
-      metalness:0.92
+      color:0x9aa1ab,
+      roughness:0.16,
+      metalness:0.95,
+      envMapIntensity:1.4
     });
 
     copyMaps(mat, old);
@@ -2796,9 +2865,23 @@ function applyMaterialTuning() {
   brakeMeshes.forEach(function(m) {
     const old = m.material || {};
     const mat = new THREE.MeshStandardMaterial({
-      color:0x9aa0aa,
-      roughness:0.48,
-      metalness:0.62
+      color:0x4a4540,
+      roughness:0.62,
+      metalness:0.78,
+      envMapIntensity:0.9
+    });
+
+    copyMaps(mat, old);
+    m.material = mat;
+  });
+
+  caliperMeshes.forEach(function(m) {
+    const old = m.material || {};
+    const mat = new THREE.MeshStandardMaterial({
+      color:0xc81e2c,
+      roughness:0.38,
+      metalness:0.32,
+      envMapIntensity:0.7
     });
 
     copyMaps(mat, old);
