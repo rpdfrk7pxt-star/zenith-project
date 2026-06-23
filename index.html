@@ -2238,6 +2238,44 @@ animate();
   document.addEventListener("fullscreenchange", syncFullscreenButton);
 }
 
+function buildFloorReflectionMap() {
+  // Lokale, NUR auf den Boden angewendete Env-Map (kein scene.environment!).
+  // Dadurch bekommt der Boden eine dezente Spiegelung, ohne die Lack-/Felgen-
+  // Materialien zu beeinflussen (das hatte beim letzten Versuch das Modell
+  // schwarz gemacht, weil scene.environment global wirkt).
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+
+  const envScene = new THREE.Scene();
+
+  const isLight = document.body.classList.contains("light");
+  const skyTop = isLight ? 0xf2f5fa : 0x2a2e36;
+  const skyBottom = isLight ? 0xd2d9e2 : 0x14161b;
+
+  const skyGeo = new THREE.SphereGeometry(20, 24, 24);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
+    uniforms: {
+      topColor: { value: new THREE.Color(skyTop) },
+      bottomColor: { value: new THREE.Color(skyBottom) }
+    },
+    vertexShader: "varying vec3 vPos; void main(){ vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+    fragmentShader: "varying vec3 vPos; uniform vec3 topColor; uniform vec3 bottomColor; void main(){ float t = clamp(normalize(vPos).y * 0.5 + 0.5, 0.0, 1.0); gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0); }"
+  });
+  envScene.add(new THREE.Mesh(skyGeo, skyMat));
+
+  // Angedeutete rote "Karosserie"-Fläche darüber, damit der Boden eine vage
+  // rötliche Spiegelung des Autos zeigt statt nur neutral grau zu glänzen.
+  const hintMat = new THREE.MeshBasicMaterial({ color: 0x9a1620, side: THREE.DoubleSide });
+  const hint = new THREE.Mesh(new THREE.PlaneGeometry(7, 2.2), hintMat);
+  hint.position.set(0, 1.1, 0);
+  envScene.add(hint);
+
+  const envRT = pmrem.fromScene(envScene, 0.12);
+  pmrem.dispose();
+  return envRT.texture;
+}
+
 function buildStudio() {
   hemiLight = new THREE.HemisphereLight(0xf2f5ff, 0x11141a, 0.82);
   scene.add(hemiLight);
@@ -2269,10 +2307,14 @@ function buildStudio() {
   topAccent.position.set(0, 8.5, 0);
   scene.add(topAccent);
 
+  const floorEnvMap = buildFloorReflectionMap();
+
   const floorMat = new THREE.MeshStandardMaterial({
     color:0x2d333d,
-    roughness:0.84,
-    metalness:0.03
+    roughness:0.42,
+    metalness:0.35,
+    envMap: floorEnvMap,
+    envMapIntensity:0.55
   });
 
   floorMesh = new THREE.Mesh(new THREE.CircleGeometry(13, 128), floorMat);
@@ -2282,8 +2324,10 @@ stageGroup.add(floorMesh);
 
   const platformMat = new THREE.MeshStandardMaterial({
     color:0x474f5b,
-    roughness:0.70,
-    metalness:0.05
+    roughness:0.38,
+    metalness:0.40,
+    envMap: floorEnvMap,
+    envMapIntensity:0.45
   });
 
   platformMesh = new THREE.Mesh(new THREE.CylinderGeometry(3.55, 3.68, 0.12, 128), platformMat);
@@ -2391,13 +2435,15 @@ function updateSceneTheme(isLight) {
 
   if (floorMesh && floorMesh.material) {
     floorMesh.material.color.setHex(isLight ? 0xdce3eb : 0x2d333d);
-    floorMesh.material.roughness = isLight ? 0.90 : 0.84;
+    floorMesh.material.roughness = isLight ? 0.48 : 0.42;
+    if (renderer) floorMesh.material.envMap = buildFloorReflectionMap();
     floorMesh.material.needsUpdate = true;
   }
 
   if (platformMesh && platformMesh.material) {
     platformMesh.material.color.setHex(isLight ? 0xcfd7e0 : 0x474f5b);
-    platformMesh.material.roughness = isLight ? 0.76 : 0.70;
+    platformMesh.material.roughness = isLight ? 0.44 : 0.38;
+    if (floorMesh && floorMesh.material) platformMesh.material.envMap = floorMesh.material.envMap;
     platformMesh.material.needsUpdate = true;
   }
 
