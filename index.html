@@ -2159,6 +2159,8 @@ let v12PulseActive = false;
 let pulseStartTime = 0;
 let baseExposure = 0.94;
 let pulseStateSaved = null;
+let v12AudioCtx = null;
+let v12AudioNodes = null;
 let floorMesh, platformMesh, backWall, leftWall, rightWall;
 let hotspotsActive = false;
 let hotspotElements = [];
@@ -3435,6 +3437,120 @@ function updateDroneShowroom() {
   }
 }
 
+function ensureV12AudioCtx() {
+  if (v12AudioCtx) return v12AudioCtx;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    v12AudioCtx = new Ctx();
+  } catch(e) {
+    v12AudioCtx = null;
+  }
+  return v12AudioCtx;
+}
+
+function startV12Audio() {
+  const ctx = ensureV12AudioCtx();
+  if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume();
+
+  // Zwei Sägezahn-Oszillatoren (Grundton + Oktave) durch einen warmen Lowpass
+  // simulieren ein tiefes V12-Standgas-Brummen, ohne eine Audiodatei laden zu müssen.
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 320;
+  filter.Q.value = 0.7;
+  filter.connect(master);
+
+  const osc1 = ctx.createOscillator();
+  osc1.type = "sawtooth";
+  osc1.frequency.value = 42;
+  osc1.connect(filter);
+
+  const osc2 = ctx.createOscillator();
+  osc2.type = "sawtooth";
+  osc2.frequency.value = 84;
+  const osc2Gain = ctx.createGain();
+  osc2Gain.gain.value = 0.35;
+  osc2.connect(osc2Gain);
+  osc2Gain.connect(filter);
+
+  // Leichtes, stetiges Rauschen für mechanische Textur (Ansaug-/Abgasgeräusch)
+  const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const noiseData = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < noiseData.length; i++) noiseData[i] = (Math.random() * 2 - 1) * 0.5;
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuffer;
+  noise.loop = true;
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.value = 220;
+  noiseFilter.Q.value = 0.5;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = 0.10;
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(filter);
+
+  osc1.start();
+  osc2.start();
+  noise.start();
+
+  master.gain.linearRampToValueAtTime(0.16, ctx.currentTime + 0.6);
+
+  v12AudioNodes = { master, filter, osc1, osc2, osc2Gain, noise, noiseGain };
+}
+
+function stopV12Audio() {
+  if (!v12AudioNodes || !v12AudioCtx) return;
+  const ctx = v12AudioCtx;
+  const nodes = v12AudioNodes;
+  const now = ctx.currentTime;
+
+  nodes.master.gain.cancelScheduledValues(now);
+  nodes.master.gain.setValueAtTime(nodes.master.gain.value, now);
+  nodes.master.gain.linearRampToValueAtTime(0, now + 0.4);
+
+  setTimeout(function() {
+    try {
+      nodes.osc1.stop();
+      nodes.osc2.stop();
+      nodes.noise.stop();
+      nodes.osc1.disconnect();
+      nodes.osc2.disconnect();
+      nodes.osc2Gain.disconnect();
+      nodes.noise.disconnect();
+      nodes.noiseGain.disconnect();
+      nodes.filter.disconnect();
+      nodes.master.disconnect();
+    } catch(e) {}
+  }, 450);
+
+  v12AudioNodes = null;
+}
+
+function updateV12Audio(heartbeat, t) {
+  if (!v12AudioNodes || !v12AudioCtx) return;
+  const ctx = v12AudioCtx;
+  const nodes = v12AudioNodes;
+  const now = ctx.currentTime;
+
+  // Drehzahl-Schwankung im Standgas: leichtes "Aufdrehen" im Rhythmus des Heartbeat
+  const revFactor = 1 + heartbeat * 0.05;
+  nodes.osc1.frequency.setTargetAtTime(42 * revFactor, now, 0.05);
+  nodes.osc2.frequency.setTargetAtTime(84 * revFactor, now, 0.05);
+
+  // Filter öffnet sich leicht bei jedem Puls -> mehr "Biss" im Takt
+  nodes.filter.frequency.setTargetAtTime(320 + heartbeat * 260, now, 0.04);
+
+  // Gesamtlautstärke folgt dem selben Heartbeat wie die Lichter
+  const vol = 0.12 + heartbeat * 0.09;
+  nodes.master.gain.setTargetAtTime(vol, now, 0.04);
+}
+
 function toggleV12Pulse(force) {
   const nextState = typeof force === "boolean" ? force : !v12PulseActive;
 
@@ -3460,7 +3576,9 @@ function startV12Pulse() {
     hemi: hemiLight ? hemiLight.intensity : null
   };
 
-  setStatus("V12 Pulse active: subtle showroom light rhythm.");
+  startV12Audio();
+
+  setStatus("V12 Pulse active: showroom light rhythm + engine sound.");
 }
 
 function stopV12Pulse(showStatus) {
@@ -3478,6 +3596,8 @@ function stopV12Pulse(showStatus) {
   }
 
   pulseStateSaved = null;
+
+  stopV12Audio();
 
   if (showStatus) setStatus("V12 Pulse stopped.");
 }
@@ -3502,6 +3622,8 @@ function updateV12Pulse() {
   if (fillLight) fillLight.intensity = base.fill + pulse * 0.45;
   if (rimLight) rimLight.intensity = base.rim + pulse * 0.72;
   if (hemiLight) hemiLight.intensity = base.hemi + pulse * 0.20;
+
+  updateV12Audio(heartbeat, t);
 }
 
 function toggleEngineHoodFocus(force) {
@@ -4042,6 +4164,13 @@ function applyConfigAfterInit() {
 function escapeHtml(value) {
   return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
+
+// V12 Pulse: Sound stoppen wenn App/Tab in den Hintergrund geht (Akku + UX)
+document.addEventListener("visibilitychange", function() {
+  if (document.hidden && v12PulseActive) {
+    toggleV12Pulse(false);
+  }
+});
 
 // PWA: Service Worker registrieren (Offline-Caching der App-Shell, Three.js-Libs und des GLB-Modells)
 if ("serviceWorker" in navigator) {
