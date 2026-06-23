@@ -932,15 +932,39 @@
   }
 
   .card {
+    position:relative;
     padding:14px;
     border-radius:22px;
-    background:rgba(255,255,255,.045);
+    background:linear-gradient(165deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
     border:1px solid var(--stroke);
     backdrop-filter:blur(18px) saturate(170%);
     -webkit-backdrop-filter:blur(18px) saturate(170%);
+    overflow:hidden;
+    box-shadow:
+      0 1px 2px rgba(0,0,0,.10),
+      0 14px 30px rgba(0,0,0,.16),
+      inset 0 1px 0 rgba(255,255,255,.12);
+    transition:transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s ease;
+  }
+
+  .card::before {
+    content:"";
+    position:absolute;
+    top:0;
+    left:14px;
+    right:14px;
+    height:2px;
+    border-radius:0 0 3px 3px;
+    background:linear-gradient(90deg, transparent, var(--red), transparent);
+    opacity:.55;
+  }
+
+  .card:active {
+    transform:scale(.97);
   }
 
   .card .k {
+    position:relative;
     font-size:11px;
     letter-spacing:.11em;
     text-transform:uppercase;
@@ -949,13 +973,27 @@
   }
 
   .card .v {
+    position:relative;
     margin-top:6px;
     font-size:22px;
     line-height:1;
     font-weight:950;
+    color:var(--text);
+    background:linear-gradient(135deg, var(--text), var(--text) 55%, var(--muted));
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+
+  @supports not (-webkit-background-clip:text) {
+    .card .v {
+      background:none;
+      -webkit-text-fill-color:unset;
+    }
   }
 
   .card .s {
+    position:relative;
     margin-top:8px;
     font-size:12px;
     line-height:1.4;
@@ -1699,6 +1737,7 @@
       0 26px 70px rgba(0,0,0,.46),
       inset 0 1px 0 rgba(255,255,255,.28),
       inset 0 -24px 80px rgba(0,0,0,.35);
+    animation:loadingBadgeIn .65s cubic-bezier(.2,.9,.25,1) both;
   }
 
   .loadingBadge::before {
@@ -1719,6 +1758,54 @@
     font-weight:950;
     letter-spacing:-.08em;
     color:rgba(255,255,255,.075);
+  }
+
+  .loadingBadgeShine {
+    position:absolute;
+    inset:0;
+    z-index:2;
+    background:linear-gradient(115deg, transparent 35%, rgba(255,255,255,.32) 50%, transparent 65%);
+    transform:translateX(-130%);
+    animation:loadingBadgeShine 2.6s ease-in-out .75s infinite;
+    pointer-events:none;
+  }
+
+  @keyframes loadingBadgeIn {
+    0% { opacity:0; transform:scale(.82) translateY(14px); }
+    100% { opacity:1; transform:scale(1) translateY(0); }
+  }
+
+  @keyframes loadingBadgeShine {
+    0% { transform:translateX(-130%); }
+    35% { transform:translateX(130%); }
+    100% { transform:translateX(130%); }
+  }
+
+  .loadingLogoTop,
+  .loadingLogoMain,
+  .loadingLogoSub {
+    opacity:0;
+    animation:loadingTextIn .55s cubic-bezier(.2,.9,.25,1) both;
+  }
+
+  .loadingLogoTop { animation-delay:.18s; }
+  .loadingLogoMain { animation-delay:.28s; }
+  .loadingLogoSub { animation-delay:.40s; }
+
+  .loadingTitle,
+  .loadingCard .note,
+  .loadingBar {
+    opacity:0;
+    animation:loadingTextIn .55s cubic-bezier(.2,.9,.25,1) both;
+  }
+
+  .loadingTitle { animation-delay:.50s; }
+  .loadingCard .note { animation-delay:.58s; }
+  .loadingBar { animation-delay:.66s; }
+
+  @keyframes loadingTextIn {
+    0% { opacity:0; transform:translateY(8px); }
+    100% { opacity:1; transform:translateY(0); }
   }
 
   .loadingLogoTop {
@@ -1978,6 +2065,7 @@
   <div class="loading" id="loading">
     <div class="loadingCard">
       <div class="loadingBadge" aria-hidden="true">
+        <div class="loadingBadgeShine"></div>
         <div>
           <div class="loadingLogoTop">Zenith Project</div>
           <div class="loadingLogoMain">812</div>
@@ -3301,7 +3389,7 @@ function setCameraView(name, options) {
   camera.fov = data.isMobileView ? 46 : 38;
   camera.updateProjectionMatrix();
 
-  applyCameraSnapshot(data.snap, options && options.duration ? options.duration : 950);
+  applyCameraSnapshot(data.snap, options && options.duration ? options.duration : 1150);
   setStatus(cameraPresetLabel(name) + " activated.");
 }
 
@@ -4117,7 +4205,12 @@ function updateCameraTween() {
 
   const now = performance.now();
   const t = Math.min(1, (now - cameraTween.startTime) / cameraTween.duration);
-  const eased = 1 - Math.pow(1 - t, 3);
+
+  // Filmisches Ease-In-Out (sanfter Start, sanftes Ende) statt reinem Ease-Out,
+  // wirkt bei Kamerafahrten deutlich ruhiger/cinematischer als ein abrupter Start.
+  const eased = t < 0.5
+    ? 16 * t * t * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 5) / 2;
 
   camera.position.lerpVectors(cameraTween.fromPos, cameraTween.toPos, eased);
   controls.target.lerpVectors(cameraTween.fromTarget, cameraTween.toTarget, eased);
