@@ -17,6 +17,10 @@
   <meta name="apple-mobile-web-app-title" content="Zenith">
   <meta name="mobile-web-app-capable" content="yes">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -50,6 +54,9 @@
     --glassBlur:28px;
     --safeTop:max(12px, env(safe-area-inset-top));
     --safeBottom:max(14px, env(safe-area-inset-bottom));
+    --red:#d81f2c;
+    --redSoft:rgba(216,31,44,.16);
+    --redGlow:rgba(216,31,44,.35);
   }
 
   body.light {
@@ -66,6 +73,9 @@
     --accentDark:#ffffff;
     --shadow:rgba(18,24,35,.10);
     --glassBlur:28px;
+    --red:#c8102e;
+    --redSoft:rgba(200,16,46,.10);
+    --redGlow:rgba(200,16,46,.28);
   }
 
   * {
@@ -79,7 +89,7 @@
     width:100%;
     height:100%;
     overflow:hidden;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    font-family:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
     background:var(--bg);
     color:var(--text);
   }
@@ -110,9 +120,10 @@
     background:var(--card);
     border:1px solid var(--stroke);
     box-shadow:
-      0 18px 50px var(--shadow),
-      inset 0 1px 0 rgba(255,255,255,.16),
-      inset 0 -1px 0 rgba(255,255,255,.045);
+      0 2px 8px rgba(0,0,0,.18),
+      0 22px 60px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,.18),
+      inset 0 -1px 0 rgba(255,255,255,.05);
     backdrop-filter:blur(var(--glassBlur)) saturate(185%);
     -webkit-backdrop-filter:blur(var(--glassBlur)) saturate(185%);
   }
@@ -139,9 +150,10 @@
     background:var(--card);
     border:1px solid var(--stroke);
     box-shadow:
-      0 18px 50px var(--shadow),
-      inset 0 1px 0 rgba(255,255,255,.16),
-      inset 0 -1px 0 rgba(255,255,255,.045);
+      0 2px 8px rgba(0,0,0,.18),
+      0 22px 60px var(--shadow),
+      inset 0 1px 0 rgba(255,255,255,.18),
+      inset 0 -1px 0 rgba(255,255,255,.05);
     backdrop-filter:blur(var(--glassBlur)) saturate(185%);
     -webkit-backdrop-filter:blur(var(--glassBlur)) saturate(185%);
   }
@@ -333,16 +345,17 @@
     font-family:inherit;
     font-weight:950;
     box-shadow:
-      0 10px 26px rgba(0,0,0,.16),
-      inset 0 1px 0 rgba(255,255,255,.14),
-      inset 0 -1px 0 rgba(255,255,255,.035);
+      0 1px 2px rgba(0,0,0,.14),
+      0 12px 28px rgba(0,0,0,.18),
+      inset 0 1px 0 rgba(255,255,255,.15),
+      inset 0 -1px 0 rgba(255,255,255,.04);
     backdrop-filter:blur(22px) saturate(180%);
     -webkit-backdrop-filter:blur(22px) saturate(180%);
     transition:
-      transform .22s cubic-bezier(.2,.8,.2,1),
+      transform .32s cubic-bezier(.34,1.56,.64,1),
       background .22s ease,
       border-color .22s ease,
-      box-shadow .22s ease,
+      box-shadow .25s ease,
       opacity .22s ease;
     touch-action:manipulation;
   }
@@ -378,8 +391,15 @@
   .sheetTab:active,
   .moreBtn:active,
   .closeBtn:active {
-    transform:scale(.95);
+    transform:scale(.93);
     background:rgba(255,255,255,.16);
+    box-shadow:
+      0 0 0 1px var(--redGlow),
+      0 6px 16px rgba(0,0,0,.22);
+    transition:
+      transform .12s cubic-bezier(.34,1.56,.64,1),
+      box-shadow .12s ease,
+      background .12s ease;
   }
 
   .ctrlBtn.active,
@@ -387,13 +407,13 @@
   .pillBtn.active,
   .sheetTab.active,
   .moreBtn.active {
-    background:rgba(255,255,255,.26);
-    border-color:rgba(255,255,255,.46);
+    background:linear-gradient(145deg, var(--redSoft), rgba(255,255,255,.08));
+    border-color:rgba(216,31,44,.55);
     color:var(--text);
     box-shadow:
       0 14px 34px var(--shadow),
-      inset 0 1px 0 rgba(255,255,255,.30),
-      inset 0 0 0 1px rgba(255,255,255,.08);
+      0 0 0 1px var(--redGlow),
+      inset 0 1px 0 rgba(255,255,255,.30);
   }
 
   body.light .ctrlBtn.active,
@@ -401,9 +421,9 @@
   body.light .pillBtn.active,
   body.light .sheetTab.active,
   body.light .moreBtn.active {
-    background:rgba(17,21,27,.16);
+    background:linear-gradient(145deg, var(--redSoft), rgba(17,21,27,.06));
     color:var(--text);
-    border-color:rgba(17,21,27,.18);
+    border-color:rgba(200,16,46,.4);
   }
 
   .rotateIcon {
@@ -1760,7 +1780,8 @@
     inset:0;
     width:42%;
     border-radius:999px;
-    background:linear-gradient(90deg, rgba(255,255,255,.16), rgba(255,255,255,.90), rgba(255,255,255,.18));
+    background:linear-gradient(90deg, rgba(216,31,44,.20), var(--red), rgba(216,31,44,.25));
+    box-shadow:0 0 16px var(--redGlow);
     animation:loadingSweep 1.45s ease-in-out infinite;
   }
 
