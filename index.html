@@ -2206,6 +2206,7 @@ const MOBILE_CAMERA_PRESETS = {
 const DRONE_SHOWROOM = {
   sideDuration: 24000,
   topDuration: 18000,
+  transitionDuration: 2600,
   radiusMobile: 8.9,
   radiusDesktop: 7.2,
   heightMobile: 1.95,
@@ -3507,6 +3508,15 @@ function stopShowroomMode(showStatus) {
   if (showStatus) setStatus("Drone Showroom stopped.");
 }
 
+function droneAngleEase(t) {
+  // Verlangsamt die Winkelgeschwindigkeit an 4 markanten Blickwinkeln
+  // (Front/Seite/Heck/Seite), damit die Drohnenfahrt dort kurz "verweilt"
+  // statt mit konstanter Geschwindigkeit vorbeizufahren - wirkt filmischer.
+  const base = t * Math.PI * 2.0;
+  const wobble = Math.sin(t * Math.PI * 8.0) * 0.10;
+  return base + wobble;
+}
+
 function updateDroneShowroom() {
   if (!showroomActive || !camera || !controls) return;
 
@@ -3521,48 +3531,86 @@ function updateDroneShowroom() {
   const target = new THREE.Vector3(0, 0.82, 0);
   const sideDuration = DRONE_SHOWROOM.sideDuration;
   const topDuration = DRONE_SHOWROOM.topDuration;
-  const cycleDuration = sideDuration + topDuration;
+  const transitionDuration = DRONE_SHOWROOM.transitionDuration;
+  const cycleDuration = sideDuration + transitionDuration + topDuration + transitionDuration;
   const cycleTime = elapsed % cycleDuration;
 
   let pos = new THREE.Vector3();
   let statusText = "";
+  let lerpSpeed = 0.035;
+  let targetLerpSpeed = 0.04;
+
+  const sideRadius = isMobileView ? DRONE_SHOWROOM.radiusMobile : DRONE_SHOWROOM.radiusDesktop;
+  const sideHeightBase = isMobileView ? DRONE_SHOWROOM.heightMobile : DRONE_SHOWROOM.heightDesktop;
+  const topRadius = isMobileView ? 3.25 : 2.75;
+  const topHeight = isMobileView ? DRONE_SHOWROOM.topHeightMobile : DRONE_SHOWROOM.topHeightDesktop;
 
   if (cycleTime < sideDuration) {
+    // Phase 1: seitliche 360°-Umkreisung mit Ease-Pause an Schlüsselwinkeln
     showroomPhase = "side";
 
     const t = cycleTime / sideDuration;
-    const angle = -Math.PI * 0.32 + t * Math.PI * 2.0;
-    const radius = isMobileView ? DRONE_SHOWROOM.radiusMobile : DRONE_SHOWROOM.radiusDesktop;
-    const heightBase = isMobileView ? DRONE_SHOWROOM.heightMobile : DRONE_SHOWROOM.heightDesktop;
-    const height = heightBase + Math.sin(t * Math.PI * 2.0) * 0.32;
+    const angle = -Math.PI * 0.32 + droneAngleEase(t);
+    const height = sideHeightBase + Math.sin(t * Math.PI * 2.0) * 0.32;
 
-    pos.set(
-      Math.cos(angle) * radius,
-      height,
-      Math.sin(angle) * radius
-    );
-
+    pos.set(Math.cos(angle) * sideRadius, height, Math.sin(angle) * sideRadius);
     statusText = "Drone Showroom: slow side orbit.";
-  } else {
+
+  } else if (cycleTime < sideDuration + transitionDuration) {
+    // Übergang: sanfte Ease-In-Out Höhenfahrt von Side- zu Top-Orbit,
+    // statt eines harten Sprungs zwischen den beiden Phasen.
+    showroomPhase = "transition";
+
+    const rawT = (cycleTime - sideDuration) / transitionDuration;
+    const t = rawT < 0.5 ? 2 * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
+
+    const fromAngle = -Math.PI * 0.32 + Math.PI * 2.0;
+    const toAngle = Math.PI * 0.18;
+    const angle = fromAngle + (toAngle - fromAngle) * t;
+
+    const radius = sideRadius + (topRadius - sideRadius) * t;
+    const height = sideHeightBase + (topHeight - sideHeightBase) * t;
+
+    pos.set(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+    target.lerp(new THREE.Vector3(0, 0.58, 0), t);
+    lerpSpeed = 0.05;
+    targetLerpSpeed = 0.05;
+    statusText = "Drone Showroom: rising to top view.";
+
+  } else if (cycleTime < sideDuration + transitionDuration + topDuration) {
+    // Phase 2: Top-Down-Umkreisung, ebenfalls mit Ease-Pause
     showroomPhase = "top";
 
-    const t = (cycleTime - sideDuration) / topDuration;
-    const angle = Math.PI * 0.18 + t * Math.PI * 2.0;
-    const radius = isMobileView ? 3.25 : 2.75;
-    const height = isMobileView ? DRONE_SHOWROOM.topHeightMobile : DRONE_SHOWROOM.topHeightDesktop;
+    const t = (cycleTime - sideDuration - transitionDuration) / topDuration;
+    const angle = Math.PI * 0.18 + droneAngleEase(t);
 
-    pos.set(
-      Math.cos(angle) * radius,
-      height,
-      Math.sin(angle) * radius
-    );
-
+    pos.set(Math.cos(angle) * topRadius, topHeight, Math.sin(angle) * topRadius);
     target.set(0, 0.58, 0);
     statusText = "Drone Showroom: top orbit.";
+
+  } else {
+    // Übergang zurück: sanfte Rückkehr von Top- zu Side-Orbit
+    showroomPhase = "transition";
+
+    const rawT = (cycleTime - sideDuration - transitionDuration - topDuration) / transitionDuration;
+    const t = rawT < 0.5 ? 2 * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
+
+    const fromAngle = Math.PI * 0.18 + Math.PI * 2.0;
+    const toAngle = -Math.PI * 0.32;
+    const angle = fromAngle + (toAngle - fromAngle) * t;
+
+    const radius = topRadius + (sideRadius - topRadius) * t;
+    const height = topHeight + (sideHeightBase - topHeight) * t;
+
+    pos.set(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+    target.lerp(new THREE.Vector3(0, 0.82, 0), t);
+    lerpSpeed = 0.05;
+    targetLerpSpeed = 0.05;
+    statusText = "Drone Showroom: returning to side view.";
   }
 
-  camera.position.lerp(pos, 0.035);
-  controls.target.lerp(target, 0.04);
+  camera.position.lerp(pos, lerpSpeed);
+  controls.target.lerp(target, targetLerpSpeed);
   camera.zoom += (1 - (camera.zoom || 1)) * 0.05;
   camera.updateProjectionMatrix();
 
