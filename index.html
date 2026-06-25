@@ -2664,6 +2664,57 @@ function buildHuman() {
   panel.position.set(0, 0.94, -0.015);
   human.add(panel);
 
+  // Schematische Silhouette (Kopf + Körper) als greifbarere Größenreferenz,
+  // statt nur abstrakter Messlinien. Bewusst stilisiert/halbtransparent,
+  // damit es klar als Schema und nicht als realistische Figur wirkt.
+  const silhouetteMat = new THREE.MeshStandardMaterial({
+    color:0xffffff,
+    transparent:true,
+    opacity:0.16,
+    roughness:0.9,
+    metalness:0,
+    side:THREE.DoubleSide,
+    depthWrite:false
+  });
+
+  const silhouetteEdgeMat = new THREE.LineBasicMaterial({
+    color:0xffffff,
+    transparent:true,
+    opacity:0.45
+  });
+
+  const headRadius = 0.105;
+  const headCenterY = 1.88 - headRadius * 1.02;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(headRadius, 20, 16), silhouetteMat);
+  head.position.set(0, headCenterY, 0);
+  human.add(head);
+  human.add(new THREE.LineSegments(new THREE.EdgesGeometry(head.geometry, 24), silhouetteEdgeMat));
+
+  const neckY = headCenterY - headRadius * 1.1;
+  const shoulderWidth = 0.40;
+  const hipWidth = 0.30;
+  const bodyTopY = neckY - 0.05;
+  const bodyBottomY = 0.0;
+
+  const bodyShape = new THREE.Shape();
+  bodyShape.moveTo(-shoulderWidth / 2, bodyTopY);
+  bodyShape.quadraticCurveTo(-shoulderWidth / 2 - 0.03, bodyTopY - 0.08, -shoulderWidth / 2 + 0.02, bodyTopY - 0.16);
+  bodyShape.lineTo(-hipWidth / 2 - 0.02, bodyBottomY + 0.12);
+  bodyShape.quadraticCurveTo(-hipWidth / 2, bodyBottomY, -hipWidth / 2 + 0.04, bodyBottomY);
+  bodyShape.lineTo(hipWidth / 2 - 0.04, bodyBottomY);
+  bodyShape.quadraticCurveTo(hipWidth / 2, bodyBottomY, hipWidth / 2 + 0.02, bodyBottomY + 0.12);
+  bodyShape.lineTo(shoulderWidth / 2 - 0.02, bodyTopY - 0.16);
+  bodyShape.quadraticCurveTo(shoulderWidth / 2 + 0.03, bodyTopY - 0.08, shoulderWidth / 2, bodyTopY);
+  bodyShape.closePath();
+
+  const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, { depth:0.22, bevelEnabled:true, bevelThickness:0.02, bevelSize:0.02, bevelSegments:2 });
+  bodyGeo.center();
+  bodyGeo.translate(0, (bodyTopY + bodyBottomY) / 2, 0);
+
+  const body = new THREE.Mesh(bodyGeo, silhouetteMat);
+  human.add(body);
+  human.add(new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo, 28), silhouetteEdgeMat));
+
   // Label als Sprite
   const labelCanvas = document.createElement("canvas");
   labelCanvas.width = 512;
