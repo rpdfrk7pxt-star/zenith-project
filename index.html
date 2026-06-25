@@ -1432,10 +1432,26 @@
       border-radius:20px;
       max-width:none;
       display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      grid-template-rows:repeat(2, 1fr);
+      grid-template-columns:repeat(8, 1fr);
+      grid-auto-rows:1fr;
       gap:6px;
       overflow:visible;
+    }
+
+    .viewDock .pillBtn {
+      grid-column:span 2;
+    }
+
+    .viewDock .pillBtn:nth-child(5) {
+      grid-column:2 / span 2;
+    }
+
+    .viewDock .pillBtn:nth-child(6) {
+      grid-column:4 / span 2;
+    }
+
+    .viewDock .pillBtn:nth-child(7) {
+      grid-column:6 / span 2;
     }
 
     .pillBtn {
@@ -1981,6 +1997,7 @@
     <button class="pillBtn" onclick="setCameraView('rear')">Rear</button>
     <button class="pillBtn" onclick="setCameraView('wheel')">Wheel</button>
     <button class="pillBtn" onclick="setCameraView('top')">Top</button>
+    <button class="pillBtn" id="hoodDockBtn" onclick="toggleEngineHoodFocus(true)">Hood</button>
   </div>
 
   <div class="status" id="status">Ferrari model is loading. After that you can rotate, zoom, open Details and activate scale mode.</div>
@@ -3363,7 +3380,8 @@ function applyCameraSnapshot(snapshot, duration) {
   const engineBtn = document.getElementById("engineBtn");
   if (engineBtn) engineBtn.classList.remove("active");
 
-  applyInteriorMaterials(false);
+  const hoodDockBtn = document.getElementById("hoodDockBtn");
+  if (hoodDockBtn) hoodDockBtn.classList.remove("active");
 
   controls.minDistance = 2.1;
   controls.maxDistance = 10;
@@ -3898,6 +3916,9 @@ function startEngineHoodFocus() {
   const engineBtn = document.getElementById("engineBtn");
   if (engineBtn) engineBtn.classList.add("active");
 
+  const hoodDockBtn = document.getElementById("hoodDockBtn");
+  if (hoodDockBtn) hoodDockBtn.classList.add("active");
+
   controls.minDistance = 0.8;
   controls.maxDistance = 6.5;
   controls.maxPolarAngle = Math.PI * 0.58;
@@ -3928,6 +3949,9 @@ function stopEngineHoodFocus(showStatus) {
 
   const engineBtn = document.getElementById("engineBtn");
   if (engineBtn) engineBtn.classList.remove("active");
+
+  const hoodDockBtn = document.getElementById("hoodDockBtn");
+  if (hoodDockBtn) hoodDockBtn.classList.remove("active");
 
   controls.enablePan = true;
 
