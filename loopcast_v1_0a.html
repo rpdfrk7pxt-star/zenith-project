@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LOOPCAST — MP3 zu Video</title>
+<meta name="theme-color" content="#05060a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05060a; --ink:#f2f4f9; --ink-dim:rgba(242,244,249,.60); --ink-faint:rgba(242,244,249,.34);
+  --accent:#7cf2c8; --accent-2:#ffb347; --go:#19c98a;
+  --glass:rgba(255,255,255,.075); --edge:rgba(255,255,255,.19); --edge-soft:rgba(255,255,255,.10);
+  --shadow:0 12px 40px rgba(0,0,0,.6);
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+:root:not([data-theme="light"]),:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg)}
+body{color:var(--ink);font-family:'Inter Tight',-apple-system,system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+#wrap{position:fixed;inset:0;display:grid;place-items:center;padding:70px 14px 230px}
+#stage{display:block;max-width:100%;max-height:100%;aspect-ratio:16/9;border-radius:14px;background:#000;
+  box-shadow:0 30px 90px rgba(0,0,0,.8)}
+#stage.rec{box-shadow:0 0 0 2px #ff3b52,0 30px 90px rgba(0,0,0,.8)}
+
+.g{position:relative;background:var(--glass);border:1px solid var(--edge-soft);border-radius:18px;
+  -webkit-backdrop-filter:blur(26px) saturate(190%);backdrop-filter:blur(26px) saturate(190%);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.2)}
+.g::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.02) 26%,rgba(255,255,255,0) 55%);
+  mix-blend-mode:overlay}
+
+.top{position:fixed;left:14px;right:14px;top:calc(var(--safe-t) + 12px);display:flex;gap:10px;align-items:center;z-index:30}
+.brand{padding:9px 15px;flex:0 0 auto}
+.brand b{font-family:'Archivo',sans-serif;font-weight:800;font-size:16px;letter-spacing:.08em}
+.state{flex:1;min-width:0;padding:9px 15px;font-size:12.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.panel{position:fixed;left:14px;right:14px;bottom:calc(var(--safe-b) + 14px);z-index:31;padding:14px;border-radius:24px;
+  display:flex;flex-direction:column;gap:12px;max-width:940px;margin:0 auto}
+.looks{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.looks::-webkit-scrollbar{display:none}
+.look{flex:0 0 auto;padding:9px 15px;border-radius:999px;font-size:13px;font-weight:500;cursor:pointer;
+  color:var(--ink-dim);background:rgba(255,255,255,.06);border:1px solid var(--edge-soft);white-space:nowrap;
+  transition:background .2s,color .2s,transform .16s}
+.look:active{transform:scale(.94)}
+.look.on{color:#eafff7;background:rgba(124,242,200,.20);border-color:rgba(124,242,200,.5)}
+.slots{display:flex;gap:10px;flex-wrap:wrap}
+.slot{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:16px;
+  background:rgba(255,255,255,.055);border:1px dashed var(--edge);cursor:pointer;transition:background .2s,border-color .2s}
+.slot:hover{background:rgba(255,255,255,.10)}
+.slot.full{border-style:solid;border-color:rgba(124,242,200,.45);background:rgba(124,242,200,.10)}
+.slot svg{width:20px;height:20px;flex:0 0 20px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round}
+.slot .tx{min-width:0}
+.slot .tx b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .tx span{display:block;font-size:11px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot img{width:34px;height:34px;object-fit:contain;flex:0 0 34px;background:rgba(0,0,0,.35);border-radius:8px}
+.bar2{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;gap:3px;padding:3px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid var(--edge-soft);flex:0 0 auto}
+.seg button{padding:9px 13px;border:0;border-radius:11px;background:transparent;color:var(--ink-dim);
+  font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.seg button.on{background:rgba(255,255,255,.16);color:#fff}
+.go{flex:1;min-width:190px;display:flex;align-items:center;justify-content:center;gap:9px;padding:15px 20px;border-radius:17px;
+  cursor:pointer;font-weight:600;font-size:15px;color:#02140e;
+  background:linear-gradient(180deg,#5bf0b8,#0fae78);border:1px solid rgba(255,255,255,.28);
+  box-shadow:0 8px 24px rgba(15,174,120,.32),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .16s,opacity .2s}
+.go:active{transform:scale(.97)}
+.go.off{opacity:.4;pointer-events:none}
+.go.alt{background:rgba(255,255,255,.12);color:var(--ink);border-color:var(--edge);box-shadow:none;flex:0 0 auto;min-width:0;font-size:13px;padding:15px 16px}
+.note{font-size:11.5px;color:var(--ink-faint);line-height:1.4}
+
+.ov{position:fixed;inset:0;z-index:90;display:none;place-items:center;background:rgba(5,6,10,.93);
+  backdrop-filter:blur(16px);padding:26px}
+.ov.on{display:grid}
+.ov .card{width:100%;max-width:440px;padding:26px;border-radius:26px;text-align:center}
+.ov h3{font-family:'Archivo',sans-serif;font-size:20px;margin:0 0 8px}
+.ov p{color:var(--ink-dim);font-size:13.5px;line-height:1.55;margin:0 0 16px}
+.prog{height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin:16px 0 10px}
+.prog i{display:block;height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  transition:width .25s}
+.steps{text-align:left;font-size:12.5px;color:var(--ink-faint);line-height:1.9;margin:8px 0 0}
+.steps b{color:var(--ink);font-weight:500}
+.steps .d{color:var(--accent)}
+video.prev{width:100%;border-radius:14px;margin-bottom:14px;background:#000}
+.btn{padding:13px 16px;border-radius:14px;border:1px solid var(--edge);background:rgba(255,255,255,.12);
+  color:var(--ink);font-family:inherit;font-size:13.5px;font-weight:500;cursor:pointer;width:100%;margin-top:8px}
+.btn.p{background:linear-gradient(180deg,#5bf0b8,#0fae78);color:#02140e;font-weight:600;border-color:rgba(255,255,255,.28)}
+.log{margin-top:12px;max-height:110px;overflow:auto;font-family:ui-monospace,monospace;font-size:10px;
+  color:var(--ink-faint);text-align:left;background:rgba(0,0,0,.35);border-radius:10px;padding:8px;line-height:1.5}
+.toast{position:fixed;left:50%;transform:translate(-50%,-14px);top:calc(var(--safe-t) + 72px);z-index:80;padding:10px 18px;
+  border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .3s,transform .35s;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.err{position:fixed;inset:0;z-index:110;display:none;place-items:center;padding:30px;text-align:center;background:var(--bg)}
+.err.on{display:grid}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.05s !important}}
+</style>
+</head>
+<body>
+
+<div id="wrap"><canvas id="stage"></canvas></div>
+
+<div class="top">
+  <div class="brand g"><b>LOOPCAST</b></div>
+  <div class="state g" id="state">Musik und Logo wählen</div>
+</div>
+
+<div class="panel g">
+  <div class="looks" id="looks"></div>
+
+  <div class="slots">
+    <div class="slot" id="slotAudio">
+      <svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="17.5" cy="16" r="2.6"/></svg>
+      <div class="tx"><b id="aName">Musikdatei</b><span id="aSub">MP3, WAV, M4A — tippen oder hierher ziehen</span></div>
+    </div>
+    <div class="slot" id="slotLogo">
+      <img id="logoPrev" style="display:none" alt="">
+      <svg viewBox="0 0 24 24" id="logoIcon"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>
+      <div class="tx"><b id="lName">Logo / Copyright</b><span id="lSub">PNG mit Transparenz</span></div>
+    </div>
+  </div>
+
+  <div class="bar2">
+    <div class="seg" id="resSeg">
+      <button data-r="1080" class="on">1080p</button>
+      <button data-r="1440">1440p</button>
+      <button data-r="2160">4K</button>
+    </div>
+    <div class="seg" id="loopSeg">
+      <button data-l="10">10s Loop</button>
+      <button data-l="20" class="on">20s</button>
+      <button data-l="30">30s</button>
+    </div>
+    <div class="go off" id="btnGo">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round"><path d="M5 4l14 8-14 8z"/></svg>
+      <span id="goLabel">Video erstellen</span>
+    </div>
+    <div class="go alt" id="btnLive" title="Reaktive Aufnahme in Echtzeit">Reaktiv</div>
+  </div>
+  <p class="note" id="note">Schnellmodus: Der Hintergrund wird als nahtloser Loop einmal aufgenommen und danach ohne Neukodierung über die ganze Songlänge gelegt.</p>
+</div>
+
+<div class="ov" id="ovWork">
+  <div class="card g">
+    <h3 id="wTitle">Video wird erstellt</h3>
+    <p id="wSub">Bitte den Tab nicht wechseln.</p>
+    <div class="prog"><i id="wBar"></i></div>
+    <div class="steps" id="wSteps"></div>
+    <div class="log" id="wLog" style="display:none"></div>
+    <button class="btn" id="wCancel">Abbrechen</button>
+  </div>
+</div>
+
+<div class="ov" id="ovDone">
+  <div class="card g">
+    <h3>Fertig</h3>
+    <p id="dInfo"></p>
+    <video class="prev" id="dPrev" controls playsinline></video>
+    <button class="btn p" id="dSave">Video speichern</button>
+    <button class="btn" id="dClose">Schließen</button>
+  </div>
+</div>
+
+<div class="toast g" id="toast"></div>
+<div class="err" id="err"><div><h2 style="font-family:Archivo,sans-serif;margin:0 0 10px">WebGL fehlt</h2>
+  <p style="color:var(--ink-dim);max-width:340px;line-height:1.55;margin:0">Dieser Browser kann keine 3D-Grafik rendern.</p></div></div>
+
+<input type="file" id="fAudio" style="display:none">
+<input type="file" id="fLogo" accept="image/*,.png,.jpg,.jpeg,.webp" style="display:none">
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fmt=t=>{if(!isFinite(t))return'0:00';const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+(s<10?'0':'')+s;};
+let tT=null;
+function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('on'),2800);}
+function state(m){$('#state').textContent=m;}
+
+/* ---------------- Renderer ---------------- */
+const canvas=$('#stage');
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance',preserveDrawingBuffer:false}); }
+catch(e){ $('#err').classList.add('on'); return; }
+renderer.setPixelRatio(1);
+renderer.outputEncoding=THREE.LinearEncoding;
+renderer.toneMapping=THREE.NoToneMapping;
+
+const GLC=renderer.getContext();
+const HDR_OK=!!(renderer.capabilities.isWebGL2?GLC.getExtension('EXT_color_buffer_float'):GLC.getExtension('EXT_color_buffer_half_float'));
+const RT_TYPE=HDR_OK?THREE.HalfFloatType:THREE.UnsignedByteType;
+
+let OUT={w:1920,h:1080};
+const quadGeo=new THREE.PlaneGeometry(2,2);
+const quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const quadScene=new THREE.Scene();
+const quadMesh=new THREE.Mesh(quadGeo,null);
+quadScene.add(quadMesh);
+function blit(mat,target){quadMesh.material=mat;renderer.setRenderTarget(target||null);renderer.render(quadScene,quadCam);renderer.setRenderTarget(null);}
+function mkRT(w,h){return new THREE.WebGLRenderTarget(Math.max(2,w|0),Math.max(2,h|0),{
+  minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat,type:RT_TYPE,
+  depthBuffer:true,stencilBuffer:false});}
+let rtMain=null,rtB=[];
+function buildTargets(){
+  if(rtMain)rtMain.dispose();
+  rtB.forEach(p=>{p[0].dispose();p[1].dispose();});
+  rtMain=mkRT(OUT.w,OUT.h); rtB=[];
+  let w=OUT.w>>1,h=OUT.h>>1;
+  for(let i=0;i<4;i++){w=w>>1;h=h>>1;if(w<4||h<4)break;rtB.push([mkRT(w,h),mkRT(w,h)]);}
+}
+
+/* ---------------- Hintergrund-Shader ---------------- */
+const NOISE=`
+float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+ return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
+float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*vn(p);p*=2.02;a*=.5;}return s;}
+`;
+const bgMat=new THREE.ShaderMaterial({
+  uniforms:{uPh:{value:0},uT:{value:0},uA:{value:new THREE.Color(0x7cf2c8)},uB:{value:new THREE.Color(0x1b2b6b)},
+    uC:{value:new THREE.Color(0xffb347)},uAmp:{value:0},uAsp:{value:16/9}},
+  depthTest:false,depthWrite:false,
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`
+  varying vec2 vUv; uniform float uPh,uAmp,uAsp; uniform int uT; uniform vec3 uA,uB,uC;
+  `+NOISE+`
+  // Domain auf einer Kreisbahn bewegen -> exakt periodisch, also nahtlos loopbar
+  vec2 orbit(float r){return vec2(cos(uPh),sin(uPh))*r;}
+  void main(){
+    vec2 uv=vUv; vec2 p=(uv-0.5)*vec2(uAsp,1.0);
+    float d=length(p);
+    vec3 col=vec3(0.0);
+    if(uT==0){                       // Staub
+      col=mix(uB*0.12,vec3(0.0),smoothstep(0.0,1.0,d*1.1));
+      float f=fbm(p*1.6+orbit(0.45));
+      col+=uA*0.10*f;
+      col+=uA*0.16*exp(-d*3.2);
+      col+=uC*0.05*exp(-abs(p.y+0.15)*5.0);
+    } else if(uT==1){                // Nebel
+      vec2 q=p*1.15+orbit(0.6);
+      float f1=fbm(q*1.3), f2=fbm(q*2.6+vec2(f1)*0.8);
+      float m=smoothstep(0.35,0.95,f1*0.65+f2*0.45);
+      col=mix(uB*0.10,uA*0.55,m);
+      col+=uC*0.22*smoothstep(0.75,1.0,f2);
+      col*=1.0-smoothstep(0.35,1.15,d)*0.65;
+    } else if(uT==2){                // Sterne
+      col=uB*0.07*(1.0-d*0.5);
+      vec2 q=p*0.9+orbit(0.35);
+      float neb=fbm(q*1.8);
+      col+=mix(uA,uC,fbm(q*0.9))*0.16*smoothstep(0.45,1.0,neb);
+      col+=vec3(0.04)*exp(-d*2.0);
+    } else if(uT==3){                // Retro-Horizont
+      float hz=0.46;
+      if(uv.y>hz){
+        float sy=(uv.y-hz)/(1.0-hz);
+        col=mix(uB*0.35,vec3(0.0),sy);
+        float sun=1.0-smoothstep(0.0,0.30,length(vec2(p.x,(uv.y-hz-0.16)*1.4)));
+        float stripe=step(0.5,fract((uv.y-hz)*46.0));
+        col+=mix(uC,uA,sy)*sun*(0.55+0.45*stripe);
+      } else {
+        float z=1.0/max(hz-uv.y,0.004);
+        float scroll=uPh/6.2831;
+        float gx=abs(fract(p.x*z*0.09)-0.5);
+        float gy=abs(fract(z*0.10+scroll)-0.5);
+        float g=smoothstep(0.045,0.0,min(gx,gy));
+        col=uB*0.06+uA*g*0.65/max(1.0,z*0.10);
+      }
+    } else {                         // Wellen
+      float s=0.0;
+      for(int i=0;i<4;i++){
+        float fi=float(i);
+        float y=sin(p.x*(1.2+fi*0.7)+uPh*(1.0+fi))*0.16+ (fi-1.5)*0.14;
+        s+=smoothstep(0.075,0.0,abs(p.y-y))*(0.5+0.5*fi/3.0);
+      }
+      col=mix(uB*0.08,uA,clamp(s*0.5,0.0,1.0));
+      col+=uC*0.12*smoothstep(0.55,0.0,d);
+    }
+    col*=1.0+uAmp*0.35;
+    gl_FragColor=vec4(col,1.0);
+  }`});
+
+/* ---------------- Partikel (loop-sicher) ---------------- */
+const pCam=new THREE.PerspectiveCamera(55,16/9,0.1,60);
+pCam.position.set(0,0,6);
+const pScene=new THREE.Scene();
+let pts=null;
+(function(){
+  const N=26000;
+  const pos=new Float32Array(N*3), sd=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    pos[i*3]=(Math.random()-0.5)*26;
+    pos[i*3+1]=(Math.random()-0.5)*16;
+    pos[i*3+2]=(Math.random()-0.5)*18;
+    sd[i]=Math.random();
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('aSeed',new THREE.BufferAttribute(sd,1));
+  const m=new THREE.ShaderMaterial({
+    uniforms:{uPh:{value:0},uA:{value:new THREE.Color(0x7cf2c8)},uC:{value:new THREE.Color(0xffb347)},
+      uSize:{value:1},uDir:{value:new THREE.Vector3(0,1,0)},uSpan:{value:16},uAmp:{value:0}},
+    transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+    vertexShader:`
+      attribute float aSeed; uniform float uPh,uSize,uSpan,uAmp;
+      uniform vec3 uDir; varying float vS; varying float vF;
+      void main(){
+        vS=aSeed;
+        float t=fract(uPh/6.2831853+aSeed);   // exakt periodisch ueber einen Loop
+        vec3 p=position+uDir*(t-0.5)*uSpan;
+        vF=smoothstep(0.0,0.14,t)*smoothstep(1.0,0.86,t);
+        vec4 mv=modelViewMatrix*vec4(p,1.0);
+        gl_PointSize=uSize*(1.0+uAmp*0.8)*(150.0/max(-mv.z,0.6))*(0.25+aSeed*1.1);
+        gl_Position=projectionMatrix*mv;
+      }`,
+    fragmentShader:`
+      uniform vec3 uA,uC; varying float vS; varying float vF;
+      void main(){
+        vec2 d=gl_PointCoord-0.5; float f=1.0-smoothstep(0.0,0.5,length(d));
+        if(f<=0.004) discard;
+        vec3 c=mix(uA,uC,smoothstep(0.55,1.0,vS));
+        gl_FragColor=vec4(c,f*f*vF*(0.25+vS*0.6));
+      }`});
+  pts=new THREE.Points(g,m);
+  pScene.add(pts);
+})();
+
+/* ---------------- Logo-Overlay ---------------- */
+const ovCan=document.createElement('canvas');
+const ovTex=new THREE.CanvasTexture(ovCan);
+let logoImg=null;
+function drawOverlay(){
+  ovCan.width=OUT.w; ovCan.height=OUT.h;
+  const c=ovCan.getContext('2d'); c.clearRect(0,0,OUT.w,OUT.h);
+  if(logoImg){
+    const h=OUT.h*0.30;
+    const w=h*(logoImg.width/logoImg.height);
+    const x=(OUT.w-w)/2, y=(OUT.h-h)/2;
+    c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=OUT.h*0.035;
+    c.drawImage(logoImg,x,y,w,h);
+    c.shadowBlur=0;
+  }
+  ovTex.needsUpdate=true;
+}
+
+/* ---------------- Komposit ---------------- */
+const compMat=new THREE.ShaderMaterial({
+  uniforms:{tD:{value:null},tB0:{value:null},tB1:{value:null},tB2:{value:null},tB3:{value:null},tOv:{value:ovTex},
+    uBloom:{value:0.85},uExp:{value:1.10},uGrain:{value:0.26},uVig:{value:0.50},uTime:{value:0},
+    uLv:{value:4},uLogo:{value:1.0},uFade:{value:1.0}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`
+  varying vec2 vUv; uniform sampler2D tD,tB0,tB1,tB2,tB3,tOv;
+  uniform float uBloom,uExp,uGrain,uVig,uTime,uLogo,uFade; uniform int uLv;
+  vec3 aces(vec3 x){const float a=2.51,b=.03,c=2.43,d=.59,e=.14;return clamp((x*(a*x+b))/(x*(c*x+d)+e),0.,1.);}
+  float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+  void main(){
+    vec3 col=texture2D(tD,vUv).rgb;
+    vec3 bl=texture2D(tB0,vUv).rgb;
+    if(uLv>1)bl+=texture2D(tB1,vUv).rgb;
+    if(uLv>2)bl+=texture2D(tB2,vUv).rgb;
+    if(uLv>3)bl+=texture2D(tB3,vUv).rgb;
+    col+=bl*uBloom*0.30;
+    col*=uExp;
+    col=aces(col);
+    vec2 d=vUv-0.5;
+    col*=clamp(1.0-uVig*dot(d,d)*1.7,0.0,1.0);
+    col=pow(max(col,0.0),vec3(1.0/2.2));
+    col*=uFade;
+    vec4 o=texture2D(tOv,vUv);
+    col=mix(col,o.rgb,o.a*uLogo);
+    col+=(hs(vUv*vec2(1920.,1080.)+uTime)-0.5)*uGrain*0.05;
+    gl_FragColor=vec4(col,1.0);
+  }`});
+const brightMat=new THREE.ShaderMaterial({
+  uniforms:{tD:{value:null},thr:{value:0.72}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`varying vec2 vUv;uniform sampler2D tD;uniform float thr;
+    void main(){vec3 c=texture2D(tD,vUv).rgb;float b=max(c.r,max(c.g,c.b));
+      gl_FragColor=vec4(c*max(b-thr,0.)/max(b,1e-4),1.);}`});
+const blurMat=new THREE.ShaderMaterial({
+  uniforms:{tD:{value:null},dir:{value:new THREE.Vector2(1,0)},res:{value:new THREE.Vector2(1,1)}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`varying vec2 vUv;uniform sampler2D tD;uniform vec2 dir,res;
+    void main(){vec2 t=dir/res;vec4 s=texture2D(tD,vUv)*.227;
+      s+=texture2D(tD,vUv+t*1.3846)*.316;s+=texture2D(tD,vUv-t*1.3846)*.316;
+      s+=texture2D(tD,vUv+t*3.2308)*.0702;s+=texture2D(tD,vUv-t*3.2308)*.0702;
+      gl_FragColor=s;}`});
+
+/* ---------------- Looks ---------------- */
+const LOOKS=[
+  {n:'Staub',   t:0, a:0xffd9a0, b:0x2a1a3e, c:0xff9a4d, size:1.6, dir:[0,1,0],  span:16, cnt:1.0},
+  {n:'Nebel',   t:1, a:0x8ed8ff, b:0x1b2b6b, c:0xc98bff, size:2.4, dir:[1,0.2,0],span:24, cnt:0.55},
+  {n:'Sterne',  t:2, a:0xbcd8ff, b:0x10163a, c:0xffd9f0, size:1.2, dir:[0,0,1],  span:20, cnt:1.0},
+  {n:'Retro',   t:3, a:0xff6fd8, b:0x2b0f5e, c:0xffd166, size:1.4, dir:[0,1,0],  span:14, cnt:0.5},
+  {n:'Wellen',  t:4, a:0x7cf2c8, b:0x06253a, c:0xffb347, size:1.8, dir:[1,0,0],  span:22, cnt:0.7},
+  {n:'Schwarz', t:0, a:0xffffff, b:0x0a0a0c, c:0x9aa3b2, size:1.3, dir:[0,1,0],  span:16, cnt:0.8}
+];
+let look=0;
+function applyLook(i){
+  look=i;
+  const L=LOOKS[i];
+  bgMat.uniforms.uT.value=L.t;
+  bgMat.uniforms.uA.value.setHex(L.a); bgMat.uniforms.uB.value.setHex(L.b); bgMat.uniforms.uC.value.setHex(L.c);
+  const u=pts.material.uniforms;
+  u.uA.value.setHex(L.a); u.uC.value.setHex(L.c); u.uSize.value=L.size;
+  u.uDir.value.set(L.dir[0],L.dir[1],L.dir[2]).normalize(); u.uSpan.value=L.span;
+  pts.geometry.setDrawRange(0,Math.floor(26000*L.cnt));
+  document.querySelectorAll('#looks .look').forEach((el,j)=>el.classList.toggle('on',j===i));
+}
+(function(){
+  const box=$('#looks');
+  LOOKS.forEach((L,i)=>{
+    const b=document.createElement('div');
+    b.className='look'+(i===0?' on':''); b.textContent=L.n;
+    b.addEventListener('click',()=>applyLook(i));
+    box.appendChild(b);
+  });
+})();
+
+/* ---------------- Audio ---------------- */
+let actx=null,analyser=null,srcNode=null,audioEl=null,streamDest=null,freq=null,audioFile=null;
+let amp=0;
+function looksLikeAudio(f){
+  if(f.type&&(f.type.indexOf('audio')===0||f.type.indexOf('video')===0))return true;
+  return /\.(mp3|m4a|aac|wav|aiff?|flac|ogg|oga|opus|wma|caf|mp4)$/i.test(f.name||'');
+}
+async function loadAudio(f){
+  if(!looksLikeAudio(f)){toast('Das sieht nicht nach einer Audiodatei aus');return;}
+  audioFile=f;
+  if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();
+  if(actx.state==='suspended')await actx.resume();
+  if(audioEl){audioEl.pause();try{URL.revokeObjectURL(audioEl.src);}catch(e){}}
+  audioEl=new Audio(URL.createObjectURL(f));
+  audioEl.addEventListener('loadedmetadata',()=>{
+    $('#aSub').textContent=fmt(audioEl.duration)+' · bereit';
+    updateGo();
+  });
+  srcNode=actx.createMediaElementSource(audioEl);
+  analyser=actx.createAnalyser(); analyser.fftSize=1024; analyser.smoothingTimeConstant=0.75;
+  freq=new Uint8Array(analyser.frequencyBinCount);
+  streamDest=actx.createMediaStreamDestination();
+  srcNode.connect(analyser); analyser.connect(actx.destination); analyser.connect(streamDest);
+  $('#aName').textContent=f.name.replace(/\.[^.]+$/,'');
+  $('#slotAudio').classList.add('full');
+  state('Musik geladen');
+  updateGo();
+}
+function analyse(){
+  if(!analyser||!audioEl||audioEl.paused){amp*=0.92;return;}
+  analyser.getByteFrequencyData(freq);
+  let b=0;const n=Math.floor(freq.length*0.08);
+  for(let i=1;i<n;i++)b+=freq[i];
+  amp=clamp((b/((n-1)*255))*1.6,0,1.6);
+}
+
+/* ---------------- Dateien ---------------- */
+$('#slotAudio').addEventListener('click',()=>$('#fAudio').click());
+$('#slotLogo').addEventListener('click',()=>$('#fLogo').click());
+$('#fAudio').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)loadAudio(f);});
+$('#fLogo').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)loadLogo(f);});
+function loadLogo(f){
+  const img=new Image();
+  img.onload=()=>{
+    logoImg=img; drawOverlay();
+    $('#logoPrev').src=img.src; $('#logoPrev').style.display='block';
+    $('#logoIcon').style.display='none';
+    $('#lName').textContent=f.name;
+    $('#lSub').textContent=img.width+'×'+img.height;
+    $('#slotLogo').classList.add('full');
+  };
+  img.onerror=()=>toast('Bild konnte nicht geladen werden');
+  img.src=URL.createObjectURL(f);
+}
+['dragover','dragenter'].forEach(ev=>window.addEventListener(ev,e=>e.preventDefault()));
+window.addEventListener('drop',e=>{
+  e.preventDefault();
+  const files=e.dataTransfer&&e.dataTransfer.files; if(!files)return;
+  for(const f of files){
+    if(looksLikeAudio(f))loadAudio(f);
+    else if(f.type.indexOf('image')===0)loadLogo(f);
+  }
+});
+function updateGo(){
+  const ok=!!audioEl;
+  $('#btnGo').classList.toggle('off',!ok);
+  $('#btnLive').style.opacity=ok?'1':'.4';
+  if(ok&&isFinite(audioEl.duration)){
+    $('#goLabel').textContent='Video erstellen · '+fmt(audioEl.duration);
+  }
+}
+
+/* ---------------- Einstellungen ---------------- */
+let RES=1080, LOOPSEC=20, FPS=30;
+function setRes(h){
+  RES=h; OUT={w:Math.round(h*16/9),h:h};
+  renderer.setSize(OUT.w,OUT.h,false);
+  buildTargets(); drawOverlay();
+}
+document.querySelectorAll('#resSeg button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#resSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); setRes(parseInt(b.dataset.r,10));
+}));
+document.querySelectorAll('#loopSeg button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#loopSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); LOOPSEC=parseInt(b.dataset.l,10);
+}));
+
+/* ---------------- Render ---------------- */
+let phase=0, grainT=0;
+function renderFrame(){
+  bgMat.uniforms.uPh.value=phase;
+  bgMat.uniforms.uAmp.value=amp*0.35;
+  bgMat.uniforms.uAsp.value=16/9;
+  pts.material.uniforms.uPh.value=phase;
+  pts.material.uniforms.uAmp.value=amp*0.5;
+
+  renderer.autoClear=true;
+  blit(bgMat,rtMain);
+  renderer.autoClear=false;
+  renderer.setRenderTarget(rtMain);
+  renderer.render(pScene,pCam);
+  renderer.setRenderTarget(null);
+  renderer.autoClear=true;
+
+  brightMat.uniforms.tD.value=rtMain.texture;
+  let src=rtMain;
+  for(let i=0;i<rtB.length;i++){
+    const [a,b]=rtB[i];
+    const m=(i===0)?brightMat:blurMat;
+    if(i===0){ blit(brightMat,a); }
+    else{
+      blurMat.uniforms.tD.value=src.texture;
+      blurMat.uniforms.res.value.set(a.width,a.height);
+      blurMat.uniforms.dir.value.set(1,0); blit(blurMat,a);
+    }
+    blurMat.uniforms.tD.value=a.texture;
+    blurMat.uniforms.res.value.set(b.width,b.height);
+    blurMat.uniforms.dir.value.set(0,1); blit(blurMat,b);
+    src=b;
+  }
+  const u=compMat.uniforms;
+  u.tD.value=rtMain.texture;
+  for(let i=0;i<4;i++) u['tB'+i].value=rtB[i]?rtB[i][1].texture:(rtB[0]?rtB[0][1].texture:rtMain.texture);
+  u.uLv.value=rtB.length;
+  u.uTime.value=grainT;
+  u.uLogo.value=logoImg?1:0;
+  blit(compMat,null);
+}
+
+let last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt=Math.min((now-last)/1000,0.05); last=now;
+  if(!rendering){
+    analyse();
+    phase+=dt*(6.2831853/LOOPSEC);
+    grainT+=dt;
+    renderFrame();
+  }
+}
+
+/* ---------------- Aufnahme des Loops ---------------- */
+function pickMime(){
+  const l=['video/mp4;codecs=avc1.4d0034','video/mp4;codecs=avc1.42E01E','video/mp4',
+           'video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  for(const m of l) if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m)) return m;
+  return '';
+}
+let rendering=false, cancelFlag=false;
+function step(txt,st){
+  const el=document.createElement('div');
+  el.innerHTML=(st==='d'?'<span class="d">✓</span> ':'<b>›</b> ')+txt;
+  $('#wSteps').appendChild(el);
+  return el;
+}
+function markDone(el){ if(el) el.innerHTML='<span class="d">✓</span> '+el.textContent.replace(/^[›✓]\s*/,''); }
+function prog(p){ $('#wBar').style.width=clamp(p*100,0,100)+'%'; }
+
+async function recordLoop(mime){
+  return new Promise((resolve,reject)=>{
+    let stream;
+    try{ stream=canvas.captureStream(FPS); }
+    catch(e){ reject(new Error('captureStream fehlt')); return; }
+    const chunks=[];
+    let rec;
+    try{ rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:(RES>=2160?52:RES>=1440?32:18)*1000000}); }
+    catch(e){ reject(e); return; }
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+    rec.onerror=e=>reject(new Error('Aufnahmefehler'));
+    rec.onstop=()=>resolve(new Blob(chunks,{type:mime.split(';')[0]}));
+    // Loop exakt von Phase 0 bis 2*PI
+    phase=0; grainT=0; amp=0;
+    const t0=performance.now();
+    const total=LOOPSEC*1000;
+    rendering=true;
+    rec.start(500);
+    (function tick(){
+      if(cancelFlag){ rendering=false; try{rec.stop();}catch(e){} reject(new Error('abgebrochen')); return; }
+      const el=performance.now()-t0;
+      const f=clamp(el/total,0,1);
+      phase=6.2831853*f;
+      grainT=el/1000;
+      renderFrame();
+      prog(f*0.45);
+      if(el>=total){
+        rendering=false;
+        setTimeout(()=>{try{rec.stop();}catch(e){}},120);
+        return;
+      }
+      requestAnimationFrame(tick);
+    })();
+  });
+}
+
+/* ---------------- ffmpeg ---------------- */
+let ff=null, ffLog=[];
+async function getFF(onLog){
+  if(ff) return ff;
+  if(!window.FFmpegWASM||!window.FFmpegUtil) throw new Error('ffmpeg-Bibliothek nicht geladen');
+  const {FFmpeg}=window.FFmpegWASM;
+  const {toBlobURL}=window.FFmpegUtil;
+  const inst=new FFmpeg();
+  inst.on('log',({message})=>{ ffLog.push(message); if(ffLog.length>400)ffLog.shift(); onLog&&onLog(message); });
+  const base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+  await inst.load({
+    coreURL: await toBlobURL(base+'/ffmpeg-core.js','text/javascript'),
+    wasmURL: await toBlobURL(base+'/ffmpeg-core.wasm','application/wasm')
+  });
+  ff=inst; return ff;
+}
+
+/* ---------------- Ablauf: Schnellmodus ---------------- */
+let outBlob=null, outName='video.mp4';
+async function makeFast(){
+  if(!audioEl||!audioFile) return;
+  cancelFlag=false; outBlob=null;
+  $('#wSteps').innerHTML=''; $('#wLog').style.display='none'; $('#wLog').textContent='';
+  $('#wTitle').textContent='Video wird erstellt';
+  $('#wSub').textContent='Schritt 1 von 3 — bitte den Tab nicht wechseln.';
+  prog(0); $('#ovWork').classList.add('on');
+  canvas.classList.add('rec');
+  const mime=pickMime();
+  if(!mime){ fail('Dieser Browser kann kein Video aufnehmen. Nimm Chrome am Rechner.'); return; }
+  let s1,s2,s3;
+  try{
+    s1=step('Loop aufnehmen ('+LOOPSEC+' s bei '+OUT.w+'×'+OUT.h+')');
+    const loopBlob=await recordLoop(mime);
+    markDone(s1);
+    if(cancelFlag) throw new Error('abgebrochen');
+
+    const isMp4=mime.indexOf('mp4')>=0;
+    const loopName=isMp4?'loop.mp4':'loop.webm';
+    const audExt=(audioFile.name.match(/\.[^.]+$/)||['.mp3'])[0].toLowerCase();
+    const audName='song'+audExt;
+
+    s2=step('Video-Encoder laden');
+    $('#wSub').textContent='Schritt 2 von 3 — Encoder wird einmalig geladen (ca. 30 MB).';
+    const f=await getFF(m=>{
+      const L=$('#wLog'); L.style.display='block'; L.textContent=ffLog.slice(-40).join('\n'); L.scrollTop=L.scrollHeight;
+    });
+    prog(0.60); markDone(s2);
+    if(cancelFlag) throw new Error('abgebrochen');
+
+    s3=step('Loop über die Songlänge legen');
+    $('#wSub').textContent='Schritt 3 von 3 — ohne Neukodierung, das geht schnell.';
+    await f.writeFile(loopName,new Uint8Array(await loopBlob.arrayBuffer()));
+    await f.writeFile(audName,new Uint8Array(await audioFile.arrayBuffer()));
+    prog(0.70);
+
+    let args, outFile, outType;
+    if(isMp4){
+      outFile='out.mp4'; outType='video/mp4';
+      args=['-stream_loop','-1','-i',loopName,'-i',audName,
+            '-map','0:v:0','-map','1:a:0','-c:v','copy','-c:a','aac','-b:a','192k',
+            '-shortest','-movflags','+faststart',outFile];
+    } else {
+      outFile='out.webm'; outType='video/webm';
+      args=['-stream_loop','-1','-i',loopName,'-i',audName,
+            '-map','0:v:0','-map','1:a:0','-c:v','copy','-c:a','libopus','-b:a','160k',
+            '-shortest',outFile];
+    }
+    f.on&&f.on('progress',p=>{ if(p&&typeof p.progress==='number') prog(0.70+clamp(p.progress,0,1)*0.29); });
+    await f.exec(args);
+    const data=await f.readFile(outFile);
+    outBlob=new Blob([data.buffer||data],{type:outType});
+    outName=(($('#aName').textContent||'video').replace(/[^\w\-]+/g,'_'))+'_'+OUT.h+'p.'+(isMp4?'mp4':'webm');
+    try{ await f.deleteFile(loopName); await f.deleteFile(audName); await f.deleteFile(outFile); }catch(e){}
+    markDone(s3); prog(1);
+    showDone();
+  }catch(e){
+    if(String(e.message)==='abgebrochen'){ closeWork(); return; }
+    fail(String(e&&e.message||e));
+  }
+}
+
+/* ---------------- Ablauf: Reaktiv in Echtzeit ---------------- */
+async function makeLive(){
+  if(!audioEl) return;
+  const mime=pickMime();
+  if(!mime){ toast('Dieser Browser kann nicht aufnehmen'); return; }
+  cancelFlag=false; outBlob=null;
+  $('#wSteps').innerHTML=''; $('#wLog').style.display='none';
+  $('#wTitle').textContent='Reaktive Aufnahme';
+  $('#wSub').textContent='Läuft in Echtzeit — Dauer entspricht der Songlänge. Tab nicht wechseln.';
+  prog(0); $('#ovWork').classList.add('on'); canvas.classList.add('rec');
+  const s=step('Aufnahme läuft');
+  let stream;
+  try{ stream=canvas.captureStream(FPS); }catch(e){ fail('captureStream fehlt'); return; }
+  const at=streamDest.stream.getAudioTracks()[0];
+  if(at) stream.addTrack(at);
+  const chunks=[];
+  let rec;
+  try{ rec=new MediaRecorder(stream,{mimeType:mime,
+    videoBitsPerSecond:(RES>=2160?52:RES>=1440?32:18)*1000000,audioBitsPerSecond:192000}); }
+  catch(e){ fail('Aufnahme nicht möglich: '+e.name); return; }
+  rec.ondataavailable=e=>{ if(e.data&&e.data.size)chunks.push(e.data); };
+  rec.onstop=()=>{
+    const type=mime.indexOf('mp4')>=0?'video/mp4':'video/webm';
+    outBlob=new Blob(chunks,{type});
+    outName=(($('#aName').textContent||'video').replace(/[^\w\-]+/g,'_'))+'_'+OUT.h+'p.'+(type.indexOf('mp4')>=0?'mp4':'webm');
+    markDone(s); prog(1); showDone();
+  };
+  audioEl.currentTime=0;
+  await audioEl.play();
+  rec.start(1000);
+  const iv=setInterval(()=>{
+    if(cancelFlag||!audioEl){ clearInterval(iv); try{rec.stop();}catch(e){} audioEl&&audioEl.pause(); return; }
+    prog(audioEl.currentTime/Math.max(audioEl.duration,1));
+    $('#wSub').textContent='Läuft: '+fmt(audioEl.currentTime)+' von '+fmt(audioEl.duration);
+    if(audioEl.ended){ clearInterval(iv); try{rec.stop();}catch(e){} }
+  },400);
+}
+
+function fail(msg){
+  canvas.classList.remove('rec'); rendering=false;
+  $('#wTitle').textContent='Das hat nicht geklappt';
+  $('#wSub').textContent=msg;
+  $('#wCancel').textContent='Schließen';
+  if(ffLog.length){ const L=$('#wLog'); L.style.display='block'; L.textContent=ffLog.slice(-40).join('\n'); }
+}
+function closeWork(){
+  $('#ovWork').classList.remove('on'); canvas.classList.remove('rec'); rendering=false;
+  $('#wCancel').textContent='Abbrechen';
+}
+function showDone(){
+  closeWork();
+  const secs=audioEl&&isFinite(audioEl.duration)?audioEl.duration:0;
+  $('#dInfo').textContent=OUT.w+'×'+OUT.h+' · '+fmt(secs)+' · '+(outBlob.size/1048576).toFixed(1)+' MB · '+
+    (outName.endsWith('mp4')?'MP4':'WebM');
+  $('#dPrev').src=URL.createObjectURL(outBlob);
+  $('#ovDone').classList.add('on');
+}
+$('#wCancel').addEventListener('click',()=>{cancelFlag=true;closeWork();});
+$('#dClose').addEventListener('click',()=>{$('#ovDone').classList.remove('on');$('#dPrev').pause();});
+$('#dSave').addEventListener('click',()=>{
+  if(!outBlob)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(outBlob); a.download=outName;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(a.href);},2000);
+});
+$('#btnGo').addEventListener('click',makeFast);
+$('#btnLive').addEventListener('click',makeLive);
+
+/* ---------------- Start ---------------- */
+setRes(1080);
+applyLook(0);
+drawOverlay();
+state('Musik und Logo wählen');
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
