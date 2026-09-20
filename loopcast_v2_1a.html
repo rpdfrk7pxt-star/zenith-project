@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<!-- LOOPCAST — Version v2_1a -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LOOPCAST — MP3 zu Video</title>
+<meta name="theme-color" content="#04060a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04060a; --ink:#eef2f7; --ink-dim:rgba(238,242,247,.58); --ink-faint:rgba(238,242,247,.32);
+  --accent:#6fdba0; --accent-2:#e8c07a;
+  --glass:rgba(255,255,255,.07); --edge:rgba(255,255,255,.18); --edge-soft:rgba(255,255,255,.09);
+  --shadow:0 12px 40px rgba(0,0,0,.65);
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+:root:not([data-theme="light"]),:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg)}
+body{color:var(--ink);font-family:'Inter Tight',-apple-system,system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+#wrap{position:fixed;left:0;right:0;top:58px;bottom:0;display:grid;place-items:center;padding:10px 14px 12px;overflow:hidden}
+#stagebox{position:relative;max-width:100%;max-height:100%;line-height:0}
+#stage{display:block;max-width:100%;max-height:100%;aspect-ratio:16/9;border-radius:14px;background:#000;
+  box-shadow:0 26px 80px rgba(0,0,0,.85)}
+#bigPlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86px;height:86px;border-radius:99px;
+  display:grid;place-items:center;cursor:pointer;z-index:5;background:rgba(12,16,22,.55);
+  border:1px solid rgba(255,255,255,.35);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 10px 40px rgba(0,0,0,.6);transition:opacity .3s,transform .2s}
+#bigPlay:active{transform:translate(-50%,-50%) scale(.92)}
+#bigPlay svg{width:30px;height:30px;fill:#fff;stroke:none;margin-left:4px}
+#bigPlay.hide{opacity:0;pointer-events:none}
+#bigPlay small{position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);white-space:nowrap;
+  font-size:11.5px;color:var(--ink-dim);line-height:1}
+.g{position:relative;background:var(--glass);border:1px solid var(--edge-soft);border-radius:18px;
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.18)}
+.g::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,.02) 26%,rgba(255,255,255,0) 55%);
+  mix-blend-mode:overlay}
+.top{position:fixed;left:14px;right:14px;top:calc(var(--safe-t) + 10px);display:flex;gap:10px;align-items:center;z-index:40}
+.brand{padding:8px 14px;flex:0 0 auto}
+.brand b{font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;letter-spacing:.08em}
+.state{flex:1;min-width:0;padding:8px 14px;font-size:12.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel{position:fixed;left:14px;right:14px;bottom:calc(var(--safe-b) + 12px);z-index:31;border-radius:24px;
+  max-width:1040px;margin:0 auto;display:flex;flex-direction:column;max-height:58vh}
+.phead{display:flex;align-items:center;gap:10px;padding:10px 14px 6px;flex:0 0 auto;cursor:pointer}
+.phead b{font-size:12.5px;font-weight:600;flex:1;color:var(--ink-dim)}
+.chev{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;background:rgba(255,255,255,.1)}
+.chev svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;transition:transform .3s}
+.panel.min .chev svg{transform:rotate(180deg)}
+.pbody{overflow-y:auto;overscroll-behavior:contain;padding:0 13px 13px;display:flex;flex-direction:column;gap:9px}
+.panel.min .pbody>*:not(.always){display:none}
+.looks{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;align-items:center}
+.looks::-webkit-scrollbar{display:none}
+.look{flex:0 0 auto;padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:500;cursor:pointer;
+  color:var(--ink-dim);background:rgba(255,255,255,.055);border:1px solid var(--edge-soft);white-space:nowrap}
+.look.on{color:#e6fff1;background:rgba(111,219,160,.20);border-color:rgba(111,219,160,.5)}
+.thumbs{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.thumb{position:relative;width:54px;height:31px;border-radius:7px;overflow:hidden;border:1px solid var(--edge-soft);flex:0 0 auto}
+.thumb canvas{width:100%;height:100%;display:block}
+.thumb i{position:absolute;top:1px;right:1px;width:15px;height:15px;border-radius:99px;background:rgba(0,0,0,.65);
+  color:#fff;font-size:10px;font-style:normal;display:grid;place-items:center;cursor:pointer;line-height:1}
+.addimg{width:54px;height:31px;border-radius:7px;border:1px dashed var(--edge);display:grid;place-items:center;
+  cursor:pointer;color:var(--ink-faint);font-size:17px;flex:0 0 auto;line-height:1}
+.slots{display:flex;gap:9px;flex-wrap:wrap}
+.slot{flex:1 1 210px;min-width:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:15px;
+  background:rgba(255,255,255,.05);border:1px dashed var(--edge);cursor:pointer}
+.slot.full{border-style:solid;border-color:rgba(111,219,160,.45);background:rgba(111,219,160,.09)}
+.slot svg{width:19px;height:19px;flex:0 0 19px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round}
+.slot .tx{min-width:0}
+.slot .tx b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .tx span{display:block;font-size:10.5px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot canvas{width:32px;height:32px;flex:0 0 32px;border-radius:7px;
+  background:repeating-conic-gradient(#2a2d35 0 25%,#1a1d24 0 50%) 0/10px 10px}
+.line{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;gap:3px;padding:3px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--edge-soft);flex:0 0 auto}
+.seg button{padding:8px 11px;border:0;border-radius:10px;background:transparent;color:var(--ink-dim);
+  font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.seg button.on{background:rgba(255,255,255,.15);color:#fff}
+.lbl{font-size:11px;color:var(--ink-faint);flex:0 0 auto}
+.val{font-size:11px;color:var(--ink-dim);width:28px;text-align:right;flex:0 0 28px;font-variant-numeric:tabular-nums}
+.pos{display:grid;grid-template-columns:repeat(3,15px);grid-template-rows:repeat(3,15px);gap:3px;flex:0 0 auto;
+  padding:4px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid var(--edge-soft)}
+.pos button{border:0;border-radius:4px;background:rgba(255,255,255,.14);cursor:pointer;padding:0}
+.pos button.on{background:var(--accent)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:84px;height:24px;background:transparent;flex:0 0 auto}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:99px;background:rgba(255,255,255,.17)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;margin-top:-6.5px;border-radius:99px;
+  background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-track{height:4px;border-radius:99px;background:rgba(255,255,255,.17)}
+input[type=range]::-moz-range-thumb{width:17px;height:17px;border:0;border-radius:99px;background:#fff}
+.tg{width:40px;height:24px;border-radius:99px;background:rgba(255,255,255,.13);position:relative;cursor:pointer;
+  border:1px solid var(--edge-soft);flex:0 0 auto}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:99px;background:#fff;transition:transform .25s}
+.tg.on{background:var(--accent)}
+.tg.on::after{transform:translateX(16px)}
+.play{width:38px;height:38px;flex:0 0 38px;border-radius:13px;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.13);border:1px solid var(--edge-soft)}
+.play svg{width:15px;height:15px;fill:currentColor;stroke:none}
+.seek{position:relative;flex:1;min-width:110px;height:20px;display:flex;align-items:center;cursor:pointer}
+.seek .bg{position:absolute;left:0;right:0;height:4px;border-radius:99px;background:rgba(255,255,255,.15)}
+.seek .fg{position:absolute;left:0;height:4px;border-radius:99px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.tm{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.go{flex:1;min-width:180px;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 18px;border-radius:15px;
+  cursor:pointer;font-weight:600;font-size:14.5px;color:#042016;
+  background:linear-gradient(180deg,#8fe9bb,#3aa877);border:1px solid rgba(255,255,255,.26);
+  box-shadow:0 8px 22px rgba(58,168,119,.3),inset 0 1px 0 rgba(255,255,255,.45)}
+.go:active{transform:scale(.97)}
+.go.off{opacity:.38;pointer-events:none}
+.note{font-size:11px;color:var(--ink-faint);line-height:1.4;margin:0}
+.ov{position:fixed;inset:0;z-index:90;display:none;place-items:center;background:rgba(4,6,10,.94);backdrop-filter:blur(16px);padding:26px}
+.ov.on{display:grid}
+.ov .card{width:100%;max-width:450px;padding:24px;border-radius:26px;text-align:center}
+.ov h3{font-family:'Archivo',sans-serif;font-size:20px;margin:0 0 8px}
+.ov p{color:var(--ink-dim);font-size:13.5px;line-height:1.55;margin:0 0 14px}
+.prog{height:6px;border-radius:99px;background:rgba(255,255,255,.13);overflow:hidden;margin:14px 0 10px}
+.prog i{display:block;height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .2s}
+.steps{text-align:left;font-size:12.5px;color:var(--ink-faint);line-height:1.9}
+.steps .d{color:var(--accent)}
+video.prev{width:100%;border-radius:14px;margin-bottom:14px;background:#000}
+.btn{padding:12px 16px;border-radius:14px;border:1px solid var(--edge);background:rgba(255,255,255,.11);
+  color:var(--ink);font-family:inherit;font-size:13.5px;font-weight:500;cursor:pointer;width:100%;margin-top:8px}
+.btn.p{background:linear-gradient(180deg,#8fe9bb,#3aa877);color:#042016;font-weight:600;border-color:rgba(255,255,255,.26)}
+.log{margin-top:12px;max-height:110px;overflow:auto;font-family:ui-monospace,monospace;font-size:10px;
+  color:var(--ink-faint);text-align:left;background:rgba(0,0,0,.35);border-radius:10px;padding:8px;line-height:1.5}
+.toast{position:fixed;left:50%;transform:translate(-50%,-14px);top:calc(var(--safe-t) + 66px);z-index:80;padding:10px 18px;
+  border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .3s,transform .35s;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.err{position:fixed;inset:0;z-index:110;display:none;place-items:center;padding:30px;text-align:center;background:var(--bg)}
+.err.on{display:grid}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand g"><b>LOOPCAST</b></div>
+  <div class="state g" id="state">Musik wählen</div>
+</div>
+
+<div id="wrap">
+  <div id="stagebox">
+    <canvas id="stage"></canvas>
+    <div id="bigPlay"><svg viewBox="0 0 24 24" id="bigIcon"><path d="M8 5l11 7-11 7z"/></svg>
+      <small id="bigHint">Musikdatei wählen</small></div>
+  </div>
+</div>
+
+<div class="panel g" id="panel">
+  <div class="phead" id="phead">
+    <b id="pheadTx">Einstellungen</b>
+    <div class="chev"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></div>
+  </div>
+  <div class="pbody">
+
+    <div class="line">
+      <span class="lbl">Hintergrund</span>
+      <div class="thumbs" id="thumbs">
+        <div class="addimg" id="addImg">+</div>
+      </div>
+      <span class="lbl" id="imgInfo">Eigene Bilder — sonst Szene</span>
+    </div>
+
+    <div class="looks" id="looks"></div>
+
+    <div class="slots">
+      <div class="slot" id="slotAudio">
+        <svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="17.5" cy="16" r="2.6"/></svg>
+        <div class="tx"><b id="aName">Musikdatei</b><span id="aSub">MP3, WAV, M4A — tippen oder hierher ziehen</span></div>
+      </div>
+      <div class="slot" id="slotLogo">
+        <canvas id="logoPrev" width="64" height="64" style="display:none"></canvas>
+        <svg viewBox="0 0 24 24" id="logoIcon"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>
+        <div class="tx"><b id="lName">Logo / Copyright</b><span id="lSub">PNG oder JPG — schwarzer Grund wird entfernt</span></div>
+      </div>
+    </div>
+
+    <div class="line">
+      <div class="play" id="btnPlay"><svg viewBox="0 0 24 24" id="pIcon"><path d="M8 5l11 7-11 7z"/></svg></div>
+      <div class="seek" id="seek"><div class="bg"></div><div class="fg" id="seekFg"></div></div>
+      <span class="tm" id="tm">0:00 / 0:00</span>
+    </div>
+
+    <div class="line">
+      <span class="lbl">Wellen</span>
+      <div class="seg" id="waveSeg">
+        <button data-w="0" class="on">Ring</button>
+        <button data-w="1">Balken</button>
+        <button data-w="2">Beides</button>
+        <button data-w="3">Aus</button>
+      </div>
+      <span class="lbl">Größe</span>
+      <input type="range" id="sWSize" min="20" max="140" step="1" value="60"><span class="val" id="vWSize">60</span>
+      <span class="lbl">Deckkraft</span>
+      <input type="range" id="sWOp" min="10" max="150" step="1" value="90"><span class="val" id="vWOp">90</span>
+      <span class="lbl">Helligkeit</span>
+      <input type="range" id="sExp" min="30" max="160" step="1" value="78"><span class="val" id="vExp">78</span>
+    </div>
+
+    <div class="line">
+      <span class="lbl">Logo</span>
+      <div class="pos" id="logoPos">
+        <button data-p="tl"></button><button data-p="tc"></button><button data-p="tr"></button>
+        <button data-p="cl"></button><button data-p="cc"></button><button data-p="cr"></button>
+        <button data-p="bl"></button><button data-p="bc"></button><button data-p="br" class="on"></button>
+      </div>
+      <span class="lbl">Größe</span>
+      <input type="range" id="sLSize" min="3" max="45" step="1" value="11"><span class="val" id="vLSize">11</span>
+      <span class="lbl">Schwarz weg</span>
+      <div class="tg on" id="tgKey"></div>
+      <div class="seg" id="resSeg">
+        <button data-r="1080" class="on">1080p</button>
+        <button data-r="1440">1440p</button>
+        <button data-r="2160">4K</button>
+      </div>
+    </div>
+
+    <div class="line always">
+      <div class="go off" id="btnGo">
+        <svg viewBox="0 0 24 24" style="width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round"><path d="M12 4v10M7.5 10.5L12 15l4.5-4.5M4.5 19h15"/></svg>
+        <span id="goLabel">Video erstellen</span>
+      </div>
+    </div>
+    <p class="note" id="note">Es wird nichts in Echtzeit aufgenommen. Die Bilder werden einzeln gerechnet und direkt kodiert — dauert es länger, wird das Video trotzdem fehlerfrei.</p>
+  </div>
+</div>
+
+<div class="ov" id="ovWork">
+  <div class="card g">
+    <h3 id="wTitle">Video wird erstellt</h3>
+    <p id="wSub"></p>
+    <div class="prog"><i id="wBar"></i></div>
+    <div class="steps" id="wSteps"></div>
+    <div class="log" id="wLog" style="display:none"></div>
+    <button class="btn" id="wCancel">Abbrechen</button>
+  </div>
+</div>
+
+<div class="ov" id="ovDone">
+  <div class="card g">
+    <h3>Fertig</h3>
+    <p id="dInfo"></p>
+    <video class="prev" id="dPrev" controls playsinline></video>
+    <button class="btn p" id="dSave">Video speichern</button>
+    <button class="btn" id="dClose">Schließen</button>
+  </div>
+</div>
+
+<div class="toast g" id="toast"></div>
+<div class="err" id="err"><div><h2 style="font-family:Archivo,sans-serif;margin:0 0 10px">WebGL fehlt</h2>
+  <p style="color:var(--ink-dim);max-width:340px;line-height:1.55;margin:0">Dieser Browser kann keine 3D-Grafik rendern.</p></div></div>
+
+<input type="file" id="fAudio" style="display:none">
+<input type="file" id="fLogo" accept="image/*,.png,.jpg,.jpeg,.webp" style="display:none">
+<input type="file" id="fImg" accept="image/*,.png,.jpg,.jpeg,.webp" multiple style="display:none">
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fmt=t=>{if(!isFinite(t))return'0:00';const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+(s<10?'0':'')+s;};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms||0));
+let tT=null;
+function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('on'),3000);}
+function state(m){$('#state').textContent=m;}
+
+const canvas=$('#stage');
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,preserveDrawingBuffer:true,powerPreference:'high-performance'}); }
+catch(e){ $('#err').classList.add('on'); return; }
+renderer.setPixelRatio(1);
+renderer.outputEncoding=THREE.LinearEncoding;
+renderer.toneMapping=THREE.NoToneMapping;
+const GLC=renderer.getContext();
+const HDR_OK=!!(renderer.capabilities.isWebGL2?GLC.getExtension('EXT_color_buffer_float'):GLC.getExtension('EXT_color_buffer_half_float'));
+const RT_TYPE=HDR_OK?THREE.HalfFloatType:THREE.UnsignedByteType;
+
+let OUT={w:1920,h:1080};
+const quadGeo=new THREE.PlaneGeometry(2,2);
+const quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const quadScene=new THREE.Scene();
+const quadMesh=new THREE.Mesh(quadGeo,null);
+quadScene.add(quadMesh);
+function blit(mat,target,keep){
+  quadMesh.material=mat; renderer.autoClear=!keep;
+  renderer.setRenderTarget(target||null);
+  renderer.render(quadScene,quadCam);
+  renderer.setRenderTarget(null); renderer.autoClear=true;
+}
+function mkRT(w,h){return new THREE.WebGLRenderTarget(Math.max(2,w|0),Math.max(2,h|0),{
+  minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat,type:RT_TYPE,
+  depthBuffer:true,stencilBuffer:false});}
+let rtMain=null,rtB=[];
+function buildTargets(){
+  if(rtMain)rtMain.dispose();
+  rtB.forEach(p=>{p[0].dispose();p[1].dispose();});
+  rtMain=mkRT(OUT.w,OUT.h); rtB=[];
+  let w=OUT.w>>1,h=OUT.h>>1;
+  for(let i=0;i<4;i++){w=w>>1;h=h>>1;if(w<4||h<4)break;rtB.push([mkRT(w,h),mkRT(w,h)]);}
+}
+
+/* ================= Spektrum-Texturen ================= */
+const NB=128, WN=256;
+const specArr=new Uint8Array(NB*4), waveArr=new Uint8Array(WN*4);
+const specTex=new THREE.DataTexture(specArr,NB,1,THREE.RGBAFormat);
+const waveTex=new THREE.DataTexture(waveArr,WN,1,THREE.RGBAFormat);
+[specTex,waveTex].forEach(t=>{t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearFilter;t.needsUpdate=true;});
+
+/* ================= Songanalyse ================= */
+const BANDS=32, STEPS=192;
+let pattern=null;          // BANDS x STEPS, im Takt gefaltet
+let bpm=0, loopSec=16, loopBars=4, songDur=0;
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){
+    let bit=n>>1;
+    for(;j&bit;bit>>=1) j^=bit;
+    j^=bit;
+    if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}
+  }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang), half=len>>1;
+    for(let i=0;i<n;i+=len){
+      let cr=1,ci=0;
+      for(let k=0;k<half;k++){
+        const ur=re[i+k],ui=im[i+k];
+        const xr=re[i+k+half],xi=im[i+k+half];
+        const vr=xr*cr-xi*ci, vi=xr*ci+xi*cr;
+        re[i+k]=ur+vr; im[i+k]=ui+vi;
+        re[i+k+half]=ur-vr; im[i+k+half]=ui-vi;
+        const nr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=nr;
+      }
+    }
+  }
+}
+async function analyseSong(arrayBuf,onProg){
+  const ctx=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1,44100,44100);
+  const buf=await ctx.decodeAudioData(arrayBuf.slice(0));
+  const sr=buf.sampleRate;
+  songDur=buf.duration;
+  const ch=buf.numberOfChannels;
+  const L=buf.getChannelData(0);
+  const R=ch>1?buf.getChannelData(1):null;
+  const N=L.length;
+  const WIN=1024, HOP=512;
+  const win=new Float32Array(WIN);
+  for(let i=0;i<WIN;i++) win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(WIN-1));
+  const frames=Math.max(1,Math.floor((N-WIN)/HOP));
+  const bandEdge=new Int32Array(BANDS+1);
+  for(let b=0;b<=BANDS;b++) bandEdge[b]=Math.floor(Math.pow(b/BANDS,2.1)*(WIN/2-2))+1;
+  const bandE=new Float32Array(frames*BANDS);
+  const onset=new Float32Array(frames);
+  const re=new Float32Array(WIN), im=new Float32Array(WIN);
+  let prev=new Float32Array(BANDS);
+  for(let f=0;f<frames;f++){
+    const off=f*HOP;
+    for(let i=0;i<WIN;i++){
+      const s=R? (L[off+i]+R[off+i])*0.5 : L[off+i];
+      re[i]=s*win[i]; im[i]=0;
+    }
+    fft(re,im);
+    let flux=0;
+    for(let b=0;b<BANDS;b++){
+      let e=0,c=0;
+      for(let k=bandEdge[b];k<bandEdge[b+1];k++){ e+=Math.hypot(re[k],im[k]); c++; }
+      e=c?e/c:0;
+      const v=Math.log(1+e*8);
+      bandE[f*BANDS+b]=v;
+      const d=v-prev[b]; if(d>0) flux+=d;
+      prev[b]=v;
+    }
+    onset[f]=flux;
+    if((f&1023)===0){ onProg && onProg(f/frames*0.7); await sleep(0); }
+  }
+  // Tempo per Autokorrelation der Onset-Kurve
+  const fps=sr/HOP;
+  let best=0,bestLag=0;
+  for(let lag=Math.floor(fps*60/190);lag<=Math.floor(fps*60/60);lag++){
+    let s=0;
+    for(let f=0;f+lag<frames;f++) s+=onset[f]*onset[f+lag];
+    s/=(frames-lag);
+    if(s>best){best=s;bestLag=lag;}
+  }
+  bpm=bestLag? 60*fps/bestLag : 0;
+  while(bpm && bpm<70) bpm*=2;
+  while(bpm>190) bpm/=2;
+  if(!isFinite(bpm)||bpm<60||bpm>200) bpm=0;
+  const barSec=bpm? 4*60/bpm : 4.0;
+  loopBars=clamp(Math.round(14/barSec),2,8);
+  loopSec=clamp(loopBars*barSec,6,32);
+  // Rhythmusmuster auf die Loop-Länge falten
+  pattern=new Float32Array(BANDS*STEPS);
+  const cnt=new Float32Array(STEPS);
+  for(let f=0;f<frames;f++){
+    const t=f*HOP/sr;
+    const s=Math.floor(((t%loopSec)/loopSec)*STEPS)%STEPS;
+    cnt[s]++;
+    for(let b=0;b<BANDS;b++) pattern[b*STEPS+s]+=bandE[f*BANDS+b];
+  }
+  for(let s=0;s<STEPS;s++){
+    const c=Math.max(cnt[s],1);
+    for(let b=0;b<BANDS;b++) pattern[b*STEPS+s]/=c;
+  }
+  // je Band normalisieren
+  for(let b=0;b<BANDS;b++){
+    let mx=0;
+    for(let s=0;s<STEPS;s++) mx=Math.max(mx,pattern[b*STEPS+s]);
+    if(mx>0) for(let s=0;s<STEPS;s++) pattern[b*STEPS+s]/=mx;
+  }
+  onProg && onProg(1);
+  return {bpm,loopSec,loopBars,dur:songDur};
+}
+let curAmp=0;
+function feedPattern(u){
+  // u = 0..1 Position im Loop
+  if(!pattern){
+    const t=u*6.2831853;
+    for(let i=0;i<NB;i++){
+      const x=i/NB;
+      const v=0.13+0.24*Math.abs(Math.sin(t*2+x*7))*(1-x*0.7);
+      specArr[i*4]=Math.round(clamp(v,0,1)*255);
+    }
+    specTex.needsUpdate=true;
+    for(let i=0;i<WN;i++){const x=i/WN;waveArr[i*4]=Math.round((0.5+0.28*Math.sin(x*22+t*4)*Math.sin(t*2+x*5))*255);}
+    waveTex.needsUpdate=true;
+    curAmp=0.28+0.22*Math.abs(Math.sin(t*2));
+    return;
+  }
+  const fs=u*STEPS, s0=Math.floor(fs)%STEPS, s1=(s0+1)%STEPS, fr=fs-Math.floor(fs);
+  let sum=0;
+  for(let i=0;i<NB;i++){
+    const bf=(i/NB)*(BANDS-1);
+    const b0=Math.floor(bf), b1=Math.min(BANDS-1,b0+1), bfr=bf-b0;
+    const v0=pattern[b0*STEPS+s0]*(1-fr)+pattern[b0*STEPS+s1]*fr;
+    const v1=pattern[b1*STEPS+s0]*(1-fr)+pattern[b1*STEPS+s1]*fr;
+    const v=clamp((v0*(1-bfr)+v1*bfr)*1.05,0,1);
+    specArr[i*4]=Math.round(v*255);
+    if(i<NB*0.12) sum+=v;
+  }
+  specTex.needsUpdate=true;
+  for(let i=0;i<WN;i++){
+    const x=i/WN;
+    const bi=Math.floor(Math.abs(x*2-1)*(BANDS-1));
+    const e=pattern[bi*STEPS+s0];
+    waveArr[i*4]=Math.round(clamp(0.5+Math.sin(x*34+u*62.8)*e*0.42,0,1)*255);
+  }
+  waveTex.needsUpdate=true;
+  curAmp=clamp(sum/(NB*0.12)*1.3,0,1.5);
+}
+
+/* ================= Hintergrund ================= */
+const bgMat=new THREE.ShaderMaterial({
+  uniforms:{uPh:{value:0},uT:{value:0},uA:{value:new THREE.Color()},uB:{value:new THREE.Color()},
+    uC:{value:new THREE.Color()},uD:{value:new THREE.Color()},uAmp:{value:0},uAsp:{value:16/9},
+    uImgN:{value:0},uDim:{value:0.62},
+    i0:{value:null},i1:{value:null},i2:{value:null},i3:{value:null},i4:{value:null},i5:{value:null}},
+  depthTest:false,depthWrite:false,
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`
+  varying vec2 vUv;
+  uniform float uPh,uAmp,uAsp,uDim;
+  uniform int uT,uImgN; uniform vec3 uA,uB,uC,uD;
+  uniform sampler2D i0,i1,i2,i3,i4,i5;
+  float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+  float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+   return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
+  float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*vn(p);p*=2.02;a*=.5;}return s;}
+  float conif(float x,float sc,float seed,float base,float hgt){
+    float g=x*sc+seed; float rnd=h21(vec2(floor(g),seed));
+    float tri=1.0-abs(fract(g)-0.5)*2.0;
+    return base+hgt*(0.35+rnd*0.65)*pow(max(tri,0.0),0.75);
+  }
+  vec2 kb(vec2 uv,float ph,float sd){
+    float z=1.07+0.035*sin(ph+sd);
+    vec2 o=vec2(cos(ph+sd),sin(ph+sd))*0.014;
+    return (uv-0.5)/z+0.5+o;
+  }
+  vec3 pick(int k,vec2 uv){
+    if(k==0) return texture2D(i0,uv).rgb;
+    if(k==1) return texture2D(i1,uv).rgb;
+    if(k==2) return texture2D(i2,uv).rgb;
+    if(k==3) return texture2D(i3,uv).rgb;
+    if(k==4) return texture2D(i4,uv).rgb;
+    return texture2D(i5,uv).rgb;
+  }
+  void main(){
+    vec2 uv=vUv;
+    vec2 p=(uv-0.5)*vec2(uAsp,1.0);
+    vec2 orb=vec2(cos(uPh),sin(uPh));
+    vec3 col=vec3(0.0);
+    float st=step(0.9987,h21(floor(uv*860.0)))*smoothstep(0.40,1.0,uv.y);
+
+    if(uImgN>0){
+      float n=float(uImgN);
+      float u=uPh/6.2831853*n;
+      int k0=int(floor(u));
+      int k1=k0+1;
+      float f=fract(u);
+      if(k0>=uImgN) k0=k0-uImgN;
+      if(k1>=uImgN) k1=k1-uImgN;
+      vec3 c0=pick(k0,kb(uv,uPh,float(k0)*1.7));
+      vec3 c1=pick(k1,kb(uv,uPh,float(k1)*1.7));
+      float bl=(uImgN==1)?0.0:smoothstep(0.72,1.0,f);
+      col=mix(c0,c1,bl);
+      col*=uDim;
+      col*=1.0-0.25*smoothstep(0.35,1.0,length(p));
+    }
+    else if(uT==0){                       // Waldsee
+      float hz=0.42;
+      float m=max(max(conif(uv.x,7.0,1.0,hz+0.015,0.135),conif(uv.x,11.0,5.0,hz+0.005,0.095)),
+                  conif(uv.x,16.0,9.0,hz-0.005,0.065));
+      if(uv.y>hz){
+        float sy=(uv.y-hz)/(1.0-hz);
+        col=mix(uC*0.55,uB*0.55,pow(sy,0.8))+vec3(st)*0.55*sy;
+        float mo=length((uv-vec2(0.70,0.74))*vec2(uAsp,1.0));
+        col+=uD*exp(-mo*11.0)*0.75+uD*smoothstep(0.034,0.026,mo)*0.9;
+        if(uv.y<m) col=mix(uA*0.12,vec3(0.006,0.014,0.012),smoothstep(hz,m,uv.y));
+      } else {
+        float d=hz-uv.y;
+        float rip=sin(uv.x*30.0+d*40.0+uPh*2.0)*0.004*(0.3+d*3.0)+sin(uv.x*13.0-d*26.0+uPh*4.0)*0.003;
+        float ry=hz+d*0.92+rip;
+        float rm=max(conif(uv.x+rip*3.0,7.0,1.0,hz+0.015,0.135),conif(uv.x+rip*3.0,11.0,5.0,hz+0.005,0.095));
+        vec3 sky=mix(uC*0.34,uB*0.30,pow((ry-hz)/(1.0-hz),0.8));
+        col=(ry<rm)?mix(uA*0.07,vec3(0.004,0.010,0.009),0.6):sky*0.72;
+        col*=exp(-d*0.9);
+        col=mix(col,uC*0.22,smoothstep(0.0,0.10,d)*0.45*fbm(vec2(uv.x*5.0+orb.y,d*22.0)));
+      }
+      col=mix(col,uC*0.26,smoothstep(0.06,0.0,abs(uv.y-hz))*0.55);
+    }
+    else if(uT==1){                       // Wald
+      col=mix(uC*0.42,uB*0.22,smoothstep(0.0,1.0,uv.y));
+      float ray=0.0;
+      for(int i=0;i<5;i++){float fi=float(i);
+        ray+=smoothstep(0.085,0.0,abs(uv.x-(0.16+fi*0.17)-(1.0-uv.y)*0.12))*pow(1.0-uv.y,1.4);}
+      col+=uD*ray*0.16;
+      for(int i=0;i<4;i++){
+        float fi=float(i); float sc=5.0+fi*8.0;
+        float g=uv.x*sc+fi*3.1; float rnd=h21(vec2(floor(g),fi*7.0));
+        float w=0.15+rnd*0.19;
+        float trunk=smoothstep(w,w*0.5,abs(fract(g)-0.5));
+        float top=step(uv.y,0.50+rnd*0.48);
+        col=mix(col,mix(vec3(0.008,0.020,0.012),uA*0.13,fi/3.0),trunk*top*(1.0-fi*0.16));
+      }
+      col=mix(col,uA*0.16+vec3(0.006,0.020,0.010),smoothstep(0.20,0.0,uv.y)*0.7);
+      col=mix(col,uC*0.30,smoothstep(0.30,0.05,uv.y)*0.35*fbm(vec2(uv.x*3.0+orb.x*0.4,uv.y*9.0)));
+    }
+    else if(uT==2){                       // Wiese bei Nacht
+      col=mix(uC*0.40,uB*0.35,smoothstep(0.05,1.0,uv.y))+vec3(st)*0.8;
+      float mo=length((uv-vec2(0.24,0.76))*vec2(uAsp,1.0));
+      col+=uD*exp(-mo*9.0)*0.8+uD*smoothstep(0.040,0.030,mo)*1.1;
+      for(int i=0;i<3;i++){float fi=float(i);
+        float hm=0.26-fi*0.055+fbm(vec2(uv.x*(2.0+fi*1.4)+fi*6.0,0.0))*0.055;
+        col=mix(col,mix(uA*0.13,vec3(0.006,0.014,0.010),fi/2.0),step(uv.y,hm));}
+      for(int i=0;i<2;i++){float fi=float(i);
+        float sc=90.0+fi*70.0; float g=uv.x*sc+fi*4.7;
+        float rnd=h21(vec2(floor(g),fi*3.0));
+        float x=abs(fract(g)-0.5+(rnd-0.5)*0.9*uv.y);
+        float hgt=(0.09+rnd*0.13)*(1.0-fi*0.35);
+        col=mix(col,mix(vec3(0.010,0.030,0.016),uA*0.10,fi),smoothstep(0.34,0.06,x)*step(uv.y,hgt));}
+    }
+    else if(uT==3){                       // Polarlicht
+      col=mix(uB*0.30,vec3(0.004,0.008,0.020),smoothstep(0.0,1.0,uv.y))+vec3(st)*0.85;
+      for(int i=0;i<3;i++){float fi=float(i);
+        float band=fbm(vec2(uv.x*2.3+orb.x*1.1+fi*7.3,fi*3.0));
+        float cen=0.60+band*0.19-fi*0.05;
+        float w=0.075+0.055*fi;
+        float a=smoothstep(w,0.0,abs(uv.y-cen))*smoothstep(0.0,0.30,uv.y-0.24);
+        col+=((i==0)?uA:mix(uA,uD,fi*0.5))*a*(0.50+0.50*sin(uv.x*11.0+uPh*(1.0+fi)))*0.70;}
+      float m=max(conif(uv.x,9.0,2.0,0.175,0.085),conif(uv.x,14.0,6.0,0.165,0.060));
+      col=mix(col,vec3(0.010,0.022,0.028),step(uv.y,m));
+    }
+    else if(uT==4){                       // Berge
+      col=mix(uC*0.50,uB*0.45,smoothstep(0.26,1.0,uv.y))+vec3(st)*0.6;
+      float sd=length((uv-vec2(0.24,0.365))*vec2(uAsp,1.0));
+      col+=uD*exp(-sd*8.5)*0.85+uD*smoothstep(0.036,0.026,sd)*1.1;
+      for(int i=0;i<4;i++){float fi=float(i);
+        float m=fbm(vec2(uv.x*(2.2+fi*1.9)+fi*13.7,0.0))*(0.17-fi*0.02)+0.38-fi*0.058;
+        vec3 mc=mix(uA*0.22,vec3(0.006,0.010,0.018),fi/3.0);
+        mc+=uD*0.10*(1.0-fi/3.0)*smoothstep(m-0.04,m,uv.y);
+        col=mix(col,mc,step(uv.y,m));}
+      col=mix(col,uA*0.22+uD*0.05,smoothstep(0.24,0.05,uv.y)*0.40*fbm(vec2(uv.x*4.0+orb.y,uv.y*12.0)));
+    }
+    else {                                // Nebel
+      float d=length(p);
+      col=uB*0.07*(1.0-d*0.5)+vec3(st)*0.85;
+      vec2 q=p*0.9+orb*0.35;
+      col+=mix(uA,uD,fbm(q*0.9))*0.20*smoothstep(0.42,1.0,fbm(q*1.8));
+      col+=uC*0.07*smoothstep(0.7,0.0,d);
+    }
+    col*=1.0+uAmp*0.22;
+    gl_FragColor=vec4(col,1.0);
+  }`});
+
+/* ================= Wellen ================= */
+const waveMat=new THREE.ShaderMaterial({
+  uniforms:{uSpec:{value:specTex},uWave:{value:waveTex},uAsp:{value:16/9},
+    uA:{value:new THREE.Color(0xdfe8d0)},uC:{value:new THREE.Color(0x6fdba0)},
+    uBass:{value:0},uMode:{value:0},uR0:{value:0.20},uLen:{value:0.25},uOp:{value:0.9}},
+  transparent:true,depthTest:false,depthWrite:false,blending:THREE.AdditiveBlending,
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`
+  varying vec2 vUv;
+  uniform sampler2D uSpec,uWave; uniform float uAsp,uBass,uR0,uLen,uOp;
+  uniform int uMode; uniform vec3 uA,uC;
+  const float PI=3.14159265;
+  void main(){
+    vec2 p=(vUv-0.5)*vec2(uAsp,1.0);
+    vec3 col=vec3(0.0);
+    if(uMode==0||uMode==2){
+      float r=length(p);
+      float u=abs(atan(p.y,p.x)/PI);
+      float bar=floor(u*64.0)/64.0;
+      float amp=texture2D(uSpec,vec2(bar+0.004,0.5)).r;
+      float R0=uR0*(1.0+uBass*0.10);
+      float len=R0+amp*uLen;
+      float seg=smoothstep(0.06,0.20,abs(fract(u*64.0)-0.5));
+      float band=smoothstep(len,len-0.012,r)*smoothstep(R0-0.004,R0+0.010,r);
+      vec3 cc=mix(uA,uC,clamp(amp*1.25,0.0,1.0));
+      col+=cc*band*seg*(1.4+amp*1.2);
+      col+=uA*smoothstep(0.005,0.0,abs(r-R0))*0.8;
+      col+=uA*exp(-r*(9.0/max(uR0*5.0,0.4)))*(0.07+uBass*0.26);
+    }
+    if(uMode==1||uMode==2){
+      float sc=uLen/0.25;
+      float w=texture2D(uWave,vec2(vUv.x,0.5)).r*2.0-1.0;
+      float y=0.17+w*0.075*sc*(1.0+uBass*0.5);
+      float d=abs(vUv.y-y);
+      vec3 cc=mix(uA,uC,abs(w));
+      col+=cc*smoothstep(0.009,0.0,d)*1.5+cc*smoothstep(0.050,0.0,d)*0.14;
+      float bx=floor(vUv.x*80.0)/80.0;
+      float amp=texture2D(uSpec,vec2(bx,0.5)).r;
+      if(vUv.y<0.030+amp*0.14*sc && abs(fract(vUv.x*80.0)-0.5)>0.16) col+=mix(uA,uC,amp)*(0.50+amp*0.9);
+    }
+    gl_FragColor=vec4(col*uOp,1.0);
+  }`});
+
+/* ================= Partikel ================= */
+const pCam=new THREE.PerspectiveCamera(55,16/9,0.1,60);
+pCam.position.set(0,0,6);
+const pScene=new THREE.Scene();
+let pts=null;
+(function(){
+  const N=20000;
+  const pos=new Float32Array(N*3), sd=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    pos[i*3]=(Math.random()-0.5)*26; pos[i*3+1]=(Math.random()-0.5)*16; pos[i*3+2]=(Math.random()-0.5)*18;
+    sd[i]=Math.random();
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('aSeed',new THREE.BufferAttribute(sd,1));
+  const m=new THREE.ShaderMaterial({
+    uniforms:{uPh:{value:0},uA:{value:new THREE.Color(0xffffff)},uC:{value:new THREE.Color(0x9fd0b0)},
+      uSize:{value:1.4},uDir:{value:new THREE.Vector3(0,1,0)},uSpan:{value:14},uAmp:{value:0},
+      uTwinkle:{value:0.7},uBright:{value:0.5}},
+    transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+    vertexShader:`
+      attribute float aSeed; uniform float uPh,uSize,uSpan,uAmp; uniform vec3 uDir;
+      varying float vS; varying float vF;
+      void main(){
+        vS=aSeed;
+        float t=fract(uPh/6.2831853+aSeed);
+        vec3 p=position+uDir*(t-0.5)*uSpan;
+        vF=smoothstep(0.0,0.14,t)*smoothstep(1.0,0.86,t);
+        vec4 mv=modelViewMatrix*vec4(p,1.0);
+        gl_PointSize=uSize*(1.0+uAmp*0.7)*(150.0/max(-mv.z,0.6))*(0.25+aSeed*1.1);
+        gl_Position=projectionMatrix*mv;
+      }`,
+    fragmentShader:`
+      uniform vec3 uA,uC; uniform float uPh,uTwinkle,uBright;
+      varying float vS; varying float vF;
+      void main(){
+        vec2 d=gl_PointCoord-0.5;
+        float f=1.0-smoothstep(0.0,0.5,length(d));
+        if(f<=0.004) discard;
+        float tw=1.0-uTwinkle*0.85*(0.5+0.5*sin(uPh*4.0+vS*44.0));
+        gl_FragColor=vec4(mix(uA,uC,smoothstep(0.45,1.0,vS))*uBright,f*f*vF*tw*(0.22+vS*0.55));
+      }`});
+  pts=new THREE.Points(g,m);
+  pScene.add(pts);
+})();
+
+/* ================= Logo ================= */
+const ovCan=document.createElement('canvas');
+const ovTex=new THREE.CanvasTexture(ovCan);
+let logoSrc=null, logoKeyed=null;
+const cfg={pos:'br',size:11,key:true,wave:0,exp:0.78,wsize:60,wop:0.9};
+const POS={tl:[0,0],tc:[.5,0],tr:[1,0],cl:[0,.5],cc:[.5,.5],cr:[1,.5],bl:[0,1],bc:[.5,1],br:[1,1]};
+function keyOutBlack(img){
+  const c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.drawImage(img,0,0);
+  if(!cfg.key) return c;
+  const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    const l=Math.max(p[i],p[i+1],p[i+2]);
+    p[i+3]=Math.round(p[i+3]*(l/255));
+    if(l>4){const k=255/l;p[i]=Math.min(255,p[i]*k);p[i+1]=Math.min(255,p[i+1]*k);p[i+2]=Math.min(255,p[i+2]*k);}
+  }
+  x.putImageData(d,0,0); return c;
+}
+function detectBlackBg(img){
+  const c=document.createElement('canvas'); c.width=Math.min(img.width,64); c.height=Math.min(img.height,64);
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.drawImage(img,0,0,c.width,c.height);
+  const p=x.getImageData(0,0,c.width,c.height).data;
+  const cs=[0,(c.width-1)*4,(c.height-1)*c.width*4,((c.height-1)*c.width+c.width-1)*4];
+  let dark=0;
+  cs.forEach(o=>{if(p[o+3]>200&&Math.max(p[o],p[o+1],p[o+2])<48)dark++;});
+  return dark>=3;
+}
+function rebuildLogo(){
+  if(!logoSrc) return;
+  logoKeyed=keyOutBlack(logoSrc);
+  const px=$('#logoPrev').getContext('2d');
+  px.clearRect(0,0,64,64);
+  const s=Math.min(64/logoKeyed.width,64/logoKeyed.height);
+  px.drawImage(logoKeyed,(64-logoKeyed.width*s)/2,(64-logoKeyed.height*s)/2,logoKeyed.width*s,logoKeyed.height*s);
+  drawOverlay();
+}
+function drawOverlay(){
+  ovCan.width=OUT.w; ovCan.height=OUT.h;
+  const c=ovCan.getContext('2d'); c.clearRect(0,0,OUT.w,OUT.h);
+  if(logoKeyed){
+    const pad=OUT.h*0.045, h=OUT.h*cfg.size/100, w=h*(logoKeyed.width/logoKeyed.height);
+    const [px,py]=POS[cfg.pos];
+    c.shadowColor='rgba(0,0,0,.65)'; c.shadowBlur=OUT.h*0.018;
+    c.drawImage(logoKeyed,pad+(OUT.w-2*pad-w)*px,pad+(OUT.h-2*pad-h)*py,w,h);
+    c.shadowBlur=0;
+  }
+  ovTex.needsUpdate=true;
+}
+
+/* ================= Komposit ================= */
+const compMat=new THREE.ShaderMaterial({
+  uniforms:{tD:{value:null},tB0:{value:null},tB1:{value:null},tB2:{value:null},tB3:{value:null},tOv:{value:ovTex},
+    uBloom:{value:0.60},uExp:{value:0.78},uGrain:{value:0.22},uVig:{value:0.60},uTime:{value:0},uLv:{value:4},uLogo:{value:1}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`
+  varying vec2 vUv; uniform sampler2D tD,tB0,tB1,tB2,tB3,tOv;
+  uniform float uBloom,uExp,uGrain,uVig,uTime,uLogo; uniform int uLv;
+  vec3 aces(vec3 x){const float a=2.51,b=.03,c=2.43,d=.59,e=.14;return clamp((x*(a*x+b))/(x*(c*x+d)+e),0.,1.);}
+  float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+  void main(){
+    vec3 col=texture2D(tD,vUv).rgb;
+    vec3 bl=texture2D(tB0,vUv).rgb;
+    if(uLv>1)bl+=texture2D(tB1,vUv).rgb;
+    if(uLv>2)bl+=texture2D(tB2,vUv).rgb;
+    if(uLv>3)bl+=texture2D(tB3,vUv).rgb;
+    col+=bl*uBloom*0.26;
+    col*=uExp; col=aces(col);
+    vec2 d=vUv-0.5;
+    col*=clamp(1.0-uVig*dot(d,d)*1.9,0.0,1.0);
+    col=pow(max(col,0.0),vec3(1.0/2.2));
+    vec4 o=texture2D(tOv,vUv);
+    col=mix(col,o.rgb,o.a*uLogo);
+    col+=(hs(vUv*vec2(1920.,1080.)+uTime)-0.5)*uGrain*0.05;
+    gl_FragColor=vec4(col,1.0);
+  }`});
+const brightMat=new THREE.ShaderMaterial({
+  uniforms:{tD:{value:null},thr:{value:0.92}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`varying vec2 vUv;uniform sampler2D tD;uniform float thr;
+    void main(){vec3 c=texture2D(tD,vUv).rgb;float b=max(c.r,max(c.g,c.b));
+      gl_FragColor=vec4(c*max(b-thr,0.)/max(b,1e-4),1.);}`});
+const blurMat=new THREE.ShaderMaterial({
+  uniforms:{tD:{value:null},dir:{value:new THREE.Vector2(1,0)},res:{value:new THREE.Vector2(1,1)}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`varying vec2 vUv;uniform sampler2D tD;uniform vec2 dir,res;
+    void main(){vec2 t=dir/res;vec4 s=texture2D(tD,vUv)*.227;
+      s+=texture2D(tD,vUv+t*1.3846)*.316;s+=texture2D(tD,vUv-t*1.3846)*.316;
+      s+=texture2D(tD,vUv+t*3.2308)*.0702;s+=texture2D(tD,vUv-t*3.2308)*.0702;
+      gl_FragColor=s;}`});
+
+/* ================= Szenen ================= */
+const LOOKS=[
+  {n:'Waldsee',   t:0,a:0x2f6b48,b:0x0b1626,c:0x143a3a,d:0xdfe8d0,ps:1.5,dir:[0,1,0],   span:12,cnt:0.35,tw:0.85,br:0.55},
+  {n:'Wald',      t:1,a:0x3a7a4a,b:0x0a1a12,c:0x16402a,d:0xcfe6a8,ps:1.7,dir:[0,-1,0.2],span:14,cnt:0.55,tw:0.5, br:0.5},
+  {n:'Wiese',     t:2,a:0x356b46,b:0x0a1224,c:0x11304a,d:0xe8e4c0,ps:1.4,dir:[0.4,1,0], span:12,cnt:0.35,tw:0.9, br:0.6},
+  {n:'Polarlicht',t:3,a:0x35e08a,b:0x081436,c:0xaebfd8,d:0x7a5cd0,ps:1.0,dir:[0,1,0],   span:18,cnt:0.7, tw:0.7, br:0.45},
+  {n:'Berge',     t:4,a:0x3a4a70,b:0x0b1226,c:0x9c5a48,d:0xe0b070,ps:1.3,dir:[0,1,0],   span:16,cnt:0.45,tw:0.4, br:0.4},
+  {n:'Nebel',     t:5,a:0x4a8ab0,b:0x101c40,c:0x6a4a90,d:0xb07ac0,ps:2.0,dir:[0,0,1],   span:20,cnt:0.8, tw:0.5, br:0.5}
+];
+let look=0;
+function applyLook(i){
+  look=i; const L=LOOKS[i];
+  const u=bgMat.uniforms;
+  u.uT.value=L.t; u.uA.value.setHex(L.a); u.uB.value.setHex(L.b);
+  u.uC.value.setHex(L.c); u.uD.value.setHex(L.d);
+  waveMat.uniforms.uA.value.setHex(L.d); waveMat.uniforms.uC.value.setHex(L.a);
+  const q=pts.material.uniforms;
+  q.uA.value.setHex(L.d); q.uC.value.setHex(L.a); q.uSize.value=L.ps;
+  q.uDir.value.set(L.dir[0],L.dir[1],L.dir[2]).normalize(); q.uSpan.value=L.span;
+  q.uTwinkle.value=L.tw; q.uBright.value=L.br;
+  pts.geometry.setDrawRange(0,Math.floor(20000*L.cnt));
+  document.querySelectorAll('#looks .look').forEach((el,j)=>el.classList.toggle('on',j===i&&imgs.length===0));
+}
+(function(){
+  const box=$('#looks');
+  LOOKS.forEach((L,i)=>{
+    const b=document.createElement('div');
+    b.className='look'+(i===0?' on':''); b.textContent=L.n;
+    b.addEventListener('click',()=>{ clearImgs(); applyLook(i); });
+    box.appendChild(b);
+  });
+})();
+
+/* ================= Eigene Bilder ================= */
+const imgs=[];  // {tex,thumbEl}
+function coverCanvas(img,w,h){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const x=c.getContext('2d');
+  const s=Math.max(w/img.width,h/img.height);
+  const dw=img.width*s, dh=img.height*s;
+  x.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+  return c;
+}
+function refreshImgUniforms(){
+  const u=bgMat.uniforms;
+  ['i0','i1','i2','i3','i4','i5'].forEach((k,i)=>{u[k].value=imgs[i]?imgs[i].tex:(imgs[0]?imgs[0].tex:null);});
+  u.uImgN.value=imgs.length;
+  $('#imgInfo').textContent=imgs.length?imgs.length+' Bild'+(imgs.length>1?'er':'')+' aktiv':'Eigene Bilder — sonst Szene';
+  document.querySelectorAll('#looks .look').forEach((el,j)=>el.classList.toggle('on',j===look&&imgs.length===0));
+}
+function addImage(file){
+  if(imgs.length>=6){toast('Maximal sechs Bilder');return;}
+  const img=new Image();
+  img.onload=()=>{
+    const c=coverCanvas(img,1920,1080);
+    const tex=new THREE.CanvasTexture(c);
+    tex.minFilter=THREE.LinearFilter; tex.magFilter=THREE.LinearFilter;
+    tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping;
+    const el=document.createElement('div');
+    el.className='thumb';
+    const tc=document.createElement('canvas'); tc.width=108; tc.height=61;
+    tc.getContext('2d').drawImage(c,0,0,108,61);
+    el.appendChild(tc);
+    const x=document.createElement('i'); x.textContent='×';
+    x.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      const k=imgs.findIndex(o=>o.el===el);
+      if(k>=0){imgs[k].tex.dispose();imgs.splice(k,1);el.remove();refreshImgUniforms();}
+    });
+    el.appendChild(x);
+    $('#thumbs').insertBefore(el,$('#addImg'));
+    imgs.push({tex,el});
+    refreshImgUniforms();
+  };
+  img.onerror=()=>toast('Bild konnte nicht geladen werden');
+  img.src=URL.createObjectURL(file);
+}
+function clearImgs(){
+  imgs.forEach(o=>{o.tex.dispose();o.el.remove();});
+  imgs.length=0; refreshImgUniforms();
+}
+$('#addImg').addEventListener('click',()=>$('#fImg').click());
+$('#fImg').addEventListener('change',e=>{
+  const fs=e.target.files; if(!fs)return;
+  for(const f of fs) if(f.type.indexOf('image')===0) addImage(f);
+  e.target.value='';
+});
+
+/* ================= Audio ================= */
+let actx=null,audioEl=null,audioFile=null;
+function looksLikeAudio(f){
+  if(f.type&&(f.type.indexOf('audio')===0||f.type.indexOf('video')===0))return true;
+  return /\.(mp3|m4a|aac|wav|aiff?|flac|ogg|oga|opus|wma|caf|mp4)$/i.test(f.name||'');
+}
+function setPlayIcon(p){
+  const d=p?'<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>':'<path d="M8 5l11 7-11 7z"/>';
+  $('#pIcon').innerHTML=d; $('#bigIcon').innerHTML=d;
+  $('#bigPlay').classList.toggle('hide',p);
+}
+async function loadAudio(f){
+  if(!looksLikeAudio(f)){toast('Das sieht nicht nach einer Audiodatei aus');return;}
+  audioFile=f;
+  if(audioEl){audioEl.pause();try{URL.revokeObjectURL(audioEl.src);}catch(e){}}
+  audioEl=new Audio(URL.createObjectURL(f));
+  audioEl.addEventListener('ended',()=>setPlayIcon(false));
+  $('#aName').textContent=f.name.replace(/\.[^.]+$/,'');
+  $('#slotAudio').classList.add('full');
+  $('#aSub').textContent='wird analysiert …';
+  state('Song wird analysiert — Tempo und Rhythmus');
+  try{
+    const ab=await f.arrayBuffer();
+    const r=await analyseSong(ab,p=>{$('#aSub').textContent='Analyse '+Math.round(p*100)+' %';});
+    $('#aSub').textContent=fmt(r.dur)+(r.bpm?' · '+Math.round(r.bpm)+' BPM · Loop '+r.loopBars+' Takte ('+r.loopSec.toFixed(1)+' s)':' · kein Tempo erkannt');
+    state(r.bpm?'Analyse fertig — '+Math.round(r.bpm)+' BPM':'Analyse fertig');
+  }catch(e){
+    $('#aSub').textContent='Analyse fehlgeschlagen — Standardtakt';
+    pattern=null; loopSec=16;
+  }
+  $('#bigHint').textContent='Vorschau starten';
+  updateGo();
+  try{ await audioEl.play(); setPlayIcon(true); }catch(e){ setPlayIcon(false); }
+}
+$('#slotAudio').addEventListener('click',()=>$('#fAudio').click());
+$('#slotLogo').addEventListener('click',()=>$('#fLogo').click());
+$('#fAudio').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)loadAudio(f);});
+$('#fLogo').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)loadLogo(f);});
+function loadLogo(f){
+  const img=new Image();
+  img.onload=()=>{
+    logoSrc=img;
+    if(detectBlackBg(img)) cfg.key=true;
+    $('#tgKey').classList.toggle('on',cfg.key);
+    rebuildLogo();
+    $('#logoPrev').style.display='block'; $('#logoIcon').style.display='none';
+    $('#lName').textContent=f.name;
+    $('#lSub').textContent=img.width+'×'+img.height+(cfg.key?' · freigestellt':'');
+    $('#slotLogo').classList.add('full');
+  };
+  img.onerror=()=>toast('Bild konnte nicht geladen werden');
+  img.src=URL.createObjectURL(f);
+}
+['dragover','dragenter'].forEach(ev=>window.addEventListener(ev,e=>e.preventDefault()));
+window.addEventListener('drop',e=>{
+  e.preventDefault();
+  const files=e.dataTransfer&&e.dataTransfer.files; if(!files)return;
+  for(const f of files){
+    if(looksLikeAudio(f)) loadAudio(f);
+    else if(f.type.indexOf('image')===0){ if(!logoKeyed) loadLogo(f); else addImage(f); }
+  }
+});
+function updateGo(){
+  const ok=!!audioFile;
+  $('#btnGo').classList.toggle('off',!ok);
+  if(ok) $('#goLabel').textContent='Video erstellen · '+fmt(songDur||0);
+}
+
+/* ================= Vorschau ================= */
+async function togglePlay(){
+  if(!audioEl){$('#fAudio').click();return;}
+  if(audioEl.paused){await audioEl.play();setPlayIcon(true);state('Vorschau läuft');}
+  else{audioEl.pause();setPlayIcon(false);}
+}
+$('#btnPlay').addEventListener('click',togglePlay);
+$('#bigPlay').addEventListener('click',togglePlay);
+(function(){
+  const s=$('#seek'); let drag=false;
+  const go=e=>{
+    if(!audioEl||!isFinite(audioEl.duration))return;
+    const r=s.getBoundingClientRect();
+    audioEl.currentTime=clamp((e.clientX-r.left)/r.width,0,1)*audioEl.duration;
+  };
+  s.addEventListener('pointerdown',e=>{drag=true;s.setPointerCapture(e.pointerId);go(e);});
+  s.addEventListener('pointermove',e=>{if(drag)go(e);});
+  s.addEventListener('pointerup',()=>{drag=false;});
+})();
+$('#phead').addEventListener('click',()=>$('#panel').classList.toggle('min'));
+
+/* ================= Regler ================= */
+document.querySelectorAll('#waveSeg button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#waveSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); cfg.wave=parseInt(b.dataset.w,10);
+}));
+document.querySelectorAll('#logoPos button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#logoPos button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); cfg.pos=b.dataset.p; drawOverlay();
+}));
+$('#sLSize').addEventListener('input',e=>{cfg.size=parseFloat(e.target.value);$('#vLSize').textContent=cfg.size;drawOverlay();});
+$('#sExp').addEventListener('input',e=>{cfg.exp=parseFloat(e.target.value)/100;$('#vExp').textContent=e.target.value;
+  compMat.uniforms.uExp.value=cfg.exp;});
+function setWaveSize(v){
+  cfg.wsize=v; $('#vWSize').textContent=v;
+  waveMat.uniforms.uR0.value=0.09+v/140*0.26;
+  waveMat.uniforms.uLen.value=0.12+v/140*0.30;
+}
+$('#sWSize').addEventListener('input',e=>setWaveSize(parseFloat(e.target.value)));
+$('#sWOp').addEventListener('input',e=>{cfg.wop=parseFloat(e.target.value)/100;$('#vWOp').textContent=e.target.value;
+  waveMat.uniforms.uOp.value=cfg.wop;});
+$('#tgKey').addEventListener('click',function(){cfg.key=!cfg.key;this.classList.toggle('on',cfg.key);rebuildLogo();});
+let RES=1080, FPS=30;
+function setRes(h){
+  RES=h; OUT={w:Math.round(h*16/9),h:h};
+  renderer.setSize(OUT.w,OUT.h,false);
+  buildTargets(); drawOverlay();
+}
+document.querySelectorAll('#resSeg button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#resSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); setRes(parseInt(b.dataset.r,10));
+}));
+
+/* ================= Render ================= */
+let grainT=0;
+function renderFrame(u){
+  const ph=u*6.2831853;
+  feedPattern(u);
+  bgMat.uniforms.uPh.value=ph;
+  bgMat.uniforms.uAmp.value=curAmp*0.22;
+  bgMat.uniforms.uAsp.value=16/9;
+  pts.material.uniforms.uPh.value=ph;
+  pts.material.uniforms.uAmp.value=curAmp*0.4;
+
+  blit(bgMat,rtMain);
+  renderer.autoClear=false;
+  renderer.setRenderTarget(rtMain);
+  renderer.render(pScene,pCam);
+  renderer.setRenderTarget(null);
+  renderer.autoClear=true;
+
+  if(cfg.wave!==3){
+    waveMat.uniforms.uMode.value=cfg.wave;
+    waveMat.uniforms.uBass.value=curAmp;
+    blit(waveMat,rtMain,true);
+  }
+  brightMat.uniforms.tD.value=rtMain.texture;
+  let src=rtMain;
+  for(let i=0;i<rtB.length;i++){
+    const a=rtB[i][0], b=rtB[i][1];
+    if(i===0){ blit(brightMat,a); }
+    else{
+      blurMat.uniforms.tD.value=src.texture;
+      blurMat.uniforms.res.value.set(a.width,a.height);
+      blurMat.uniforms.dir.value.set(1,0); blit(blurMat,a);
+    }
+    blurMat.uniforms.tD.value=a.texture;
+    blurMat.uniforms.res.value.set(b.width,b.height);
+    blurMat.uniforms.dir.value.set(0,1); blit(blurMat,b);
+    src=b;
+  }
+  const c=compMat.uniforms;
+  c.tD.value=rtMain.texture;
+  for(let i=0;i<4;i++) c['tB'+i].value=rtB[i]?rtB[i][1].texture:(rtB[0]?rtB[0][1].texture:rtMain.texture);
+  c.uLv.value=rtB.length;
+  c.uTime.value=grainT;
+  c.uLogo.value=logoKeyed?1:0;
+  blit(compMat,null);
+}
+let previewT=0;
+function frame(){
+  requestAnimationFrame(frame);
+  if(busy) return;
+  const t=(audioEl&&!audioEl.paused)?audioEl.currentTime:(previewT+=1/60);
+  grainT+=1/60;
+  renderFrame((t%loopSec)/loopSec);
+  if(audioEl&&isFinite(audioEl.duration)){
+    const pr=audioEl.currentTime/audioEl.duration;
+    $('#seekFg').style.width=(pr*100)+'%';
+    $('#tm').textContent=fmt(audioEl.currentTime)+' / '+fmt(audioEl.duration);
+  }
+}
+
+/* ================= Erstellen ================= */
+let busy=false, cancelFlag=false, outBlob=null, outName='video.mp4', ffLog=[], ff=null;
+function step(t){const el=document.createElement('div');el.innerHTML='<b>›</b> '+t;$('#wSteps').appendChild(el);return el;}
+function markDone(el){if(el)el.innerHTML='<span class="d">✓</span> '+el.textContent.replace(/^[›✓]\s*/,'');}
+function prog(p){$('#wBar').style.width=clamp(p*100,0,100)+'%';}
+function fail(m){
+  busy=false;
+  $('#wTitle').textContent='Das hat nicht geklappt';
+  $('#wSub').textContent=m;
+  $('#wCancel').textContent='Schließen';
+  if(ffLog.length){const L=$('#wLog');L.style.display='block';L.textContent=ffLog.slice(-40).join('\n');L.scrollTop=L.scrollHeight;}
+}
+const FFBASE='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd';
+const CORE='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+async function toBlobURL(url,type,onProg){
+  const r=await fetch(url);
+  if(!r.ok) throw new Error('Download fehlgeschlagen ('+r.status+'): '+url.split('/').pop());
+  const total=parseInt(r.headers.get('Content-Length')||'0',10);
+  if(!r.body||!total||!onProg){
+    const b=await r.blob();
+    return URL.createObjectURL(new Blob([b],{type}));
+  }
+  const rd=r.body.getReader(); const parts=[]; let got=0;
+  for(;;){
+    const {done,value}=await rd.read();
+    if(done) break;
+    parts.push(value); got+=value.length;
+    onProg(got/total);
+  }
+  return URL.createObjectURL(new Blob(parts,{type}));
+}
+async function getFF(onDl){
+  if(ff) return ff;
+  if(!window.FFmpegWASM||!window.FFmpegWASM.FFmpeg)
+    throw new Error('Encoder-Skript wurde nicht geladen. Blockiert ein Werbe- oder Skriptblocker cdn.jsdelivr.net?');
+  const {FFmpeg}=window.FFmpegWASM;
+  const inst=new FFmpeg();
+  inst.on('log',({message})=>{
+    ffLog.push(message); if(ffLog.length>500)ffLog.shift();
+    const L=$('#wLog'); L.style.display='block'; L.textContent=ffLog.slice(-40).join('\n'); L.scrollTop=L.scrollHeight;
+  });
+  // Der Arbeitsprozess darf nicht direkt vom CDN starten - Browser verbieten
+  // fremde Domains bei new Worker(). Deshalb erst als Blob holen.
+  const workerURL=await toBlobURL(FFBASE+'/814.ffmpeg.js','text/javascript');
+  const coreURL  =await toBlobURL(CORE+'/ffmpeg-core.js','text/javascript');
+  const wasmURL  =await toBlobURL(CORE+'/ffmpeg-core.wasm','application/wasm',onDl);
+  try{
+    await inst.load({coreURL,wasmURL,classWorkerURL:workerURL});
+  }catch(e1){
+    try{ await inst.load({coreURL,wasmURL}); }
+    catch(e2){ throw new Error('Encoder startet nicht: '+(e2&&e2.message||e1&&e1.message||'unbekannt')); }
+  }
+  ff=inst; return ff;
+}
+function pad4(n){return ('000'+n).slice(-4);}
+async function makeVideo(){
+  if(!audioFile||busy) return;
+  busy=true; cancelFlag=false; outBlob=null; ffLog=[];
+  if(audioEl){audioEl.pause();setPlayIcon(false);}
+  $('#wSteps').innerHTML=''; $('#wLog').style.display='none'; $('#wLog').textContent='';
+  $('#wTitle').textContent='Video wird erstellt';
+  $('#wCancel').textContent='Abbrechen';
+  prog(0); $('#ovWork').classList.add('on');
+  const frames=Math.max(30,Math.round(loopSec*FPS));
+  let s1,s2,s3,s4;
+  try{
+    s1=step('Encoder laden');
+    $('#wSub').textContent='Schritt 1 von 4 — einmalig etwa 30 MB.';
+    const f=await getFF(pc=>{
+      s1.innerHTML='<b>›</b> Encoder laden ('+Math.round(pc*100)+' %)';
+      prog(pc*0.08);
+    });
+    markDone(s1); prog(0.08);
+    if(cancelFlag) throw new Error('abgebrochen');
+
+    s2=step('Bilder rechnen (0 / '+frames+')');
+    $('#wSub').textContent='Schritt 2 von 4 — jedes Bild wird einzeln gerechnet, nichts läuft in Echtzeit.';
+    for(let i=0;i<frames;i++){
+      if(cancelFlag) throw new Error('abgebrochen');
+      renderFrame(i/frames);
+      const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.93));
+      if(!blob) throw new Error('Bild konnte nicht gelesen werden');
+      await f.writeFile('f'+pad4(i)+'.jpg',new Uint8Array(await blob.arrayBuffer()));
+      if(i%5===0){
+        s2.innerHTML='<b>›</b> Bilder rechnen ('+(i+1)+' / '+frames+')';
+        prog(0.08+(i/frames)*0.42);
+        await sleep(0);
+      }
+    }
+    markDone(s2); prog(0.50);
+
+    s3=step('Loop kodieren');
+    $('#wSub').textContent='Schritt 3 von 4 — H.264 für maximale Kompatibilität.';
+    await f.exec(['-framerate',String(FPS),'-i','f%04d.jpg','-c:v','libx264','-preset','veryfast',
+                  '-crf','20','-pix_fmt','yuv420p','loop.mp4']);
+    for(let i=0;i<frames;i++){ try{ await f.deleteFile('f'+pad4(i)+'.jpg'); }catch(e){} }
+    markDone(s3); prog(0.80);
+    if(cancelFlag) throw new Error('abgebrochen');
+
+    s4=step('Ton anlegen und Loop strecken');
+    $('#wSub').textContent='Schritt 4 von 4 — das Bild wird nur kopiert, deshalb geht es schnell.';
+    const ext=(audioFile.name.match(/\.[^.]+$/)||['.mp3'])[0].toLowerCase();
+    await f.writeFile('song'+ext,new Uint8Array(await audioFile.arrayBuffer()));
+    await f.exec(['-stream_loop','-1','-i','loop.mp4','-i','song'+ext,
+                  '-map','0:v:0','-map','1:a:0','-c:v','copy','-c:a','aac','-b:a','192k',
+                  '-shortest','-movflags','+faststart','out.mp4']);
+    const data=await f.readFile('out.mp4');
+    outBlob=new Blob([data.buffer||data],{type:'video/mp4'});
+    outName=(($('#aName').textContent||'video').replace(/[^\w\-]+/g,'_'))+'_'+OUT.h+'p.mp4';
+    try{await f.deleteFile('loop.mp4');await f.deleteFile('song'+ext);await f.deleteFile('out.mp4');}catch(e){}
+    markDone(s4); prog(1);
+    busy=false;
+    $('#ovWork').classList.remove('on');
+    $('#dInfo').textContent=OUT.w+'×'+OUT.h+' · '+fmt(songDur)+' · '+(outBlob.size/1048576).toFixed(1)+' MB · MP4 (H.264 + AAC)';
+    $('#dPrev').src=URL.createObjectURL(outBlob);
+    $('#ovDone').classList.add('on');
+  }catch(e){
+    if(String(e.message)==='abgebrochen'){busy=false;$('#ovWork').classList.remove('on');return;}
+    fail(String(e&&e.message||e));
+  }
+}
+$('#btnGo').addEventListener('click',makeVideo);
+$('#wCancel').addEventListener('click',()=>{
+  if(busy){cancelFlag=true;} else {$('#ovWork').classList.remove('on');}
+});
+$('#dClose').addEventListener('click',()=>{$('#ovDone').classList.remove('on');$('#dPrev').pause();});
+$('#dSave').addEventListener('click',()=>{
+  if(!outBlob)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(outBlob); a.download=outName;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(a.href);},2000);
+});
+window.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();togglePlay();}});
+
+setRes(1080);
+applyLook(0);
+setWaveSize(60);
+refreshImgUniforms();
+state('Musik wählen');
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
