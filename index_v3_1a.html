@@ -188,7 +188,7 @@ table.cmp tr.hd th:first-child{width:36%}
     border-top:0;border-left:1px solid var(--line);padding-top:var(--safe-t)}
   body.collapsed #sheet{transform:translateX(100%)}
   #grip{display:none}
-  #tabs{padding-top:16px}
+  #tabs{padding-top:16px;flex-wrap:wrap;overflow:visible}
   #views{bottom:22px;right:388px;left:0}
   body.collapsed #views{bottom:22px;right:20px}
   #top{right:auto;width:calc(100% - 388px)}
@@ -510,6 +510,7 @@ scene.add(sky);
 const floorMat = new THREE.MeshStandardMaterial({
   color:0x0a0b0d, roughness:0.62, metalness:0.28,
 });
+floorMat.envMapIntensity = 0.42;
 const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 128), floorMat);
 floor.rotation.x = -Math.PI/2;
 floor.receiveShadow = true;
@@ -521,21 +522,29 @@ const mirrorRT = new THREE.WebGLRenderTarget(1, 1, {
   type: THREE.HalfFloatType, generateMipmaps:false,
 });
 const mirrorCam = new THREE.PerspectiveCamera();
+/* Die Spiegeltextur wird über die Matrix der SPIEGELKAMERA projiziert.
+   Nimmt man dafür die Clip-Position der Hauptkamera, sitzt das Spiegelbild
+   versetzt neben dem Objekt. */
+const textureMatrix = new THREE.Matrix4();
 const mirrorMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:false,
   uniforms:{ tex:{ value: mirrorRT.texture }, amt:{ value: 0.34 },
-             res:{ value: new THREE.Vector2(1,1) } },
-  vertexShader:`varying vec4 vC; varying vec3 vW;
-    void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz;
-      vC = projectionMatrix * viewMatrix * w; gl_Position = vC; }`,
-  fragmentShader:`
-    uniform sampler2D tex; uniform float amt; uniform vec2 res;
-    varying vec4 vC; varying vec3 vW;
+             textureMatrix:{ value: textureMatrix } },
+  vertexShader:`
+    uniform mat4 textureMatrix;
+    varying vec4 vUvR; varying vec3 vW;
     void main(){
-      vec2 uv = (vC.xy / vC.w) * 0.5 + 0.5;
-      vec3 c = texture2D(tex, uv).rgb;
+      vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz;
+      vUvR = textureMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * viewMatrix * w;
+    }`,
+  fragmentShader:`
+    uniform sampler2D tex; uniform float amt;
+    varying vec4 vUvR; varying vec3 vW;
+    void main(){
+      vec3 c = texture2DProj(tex, vUvR).rgb;
       float d = length(vW.xz);
-      float fade = smoothstep(11.0, 1.2, d);
+      float fade = smoothstep(12.0, 1.0, d);
       gl_FragColor = vec4(c, amt * fade);
     }`,
 });
@@ -698,13 +707,13 @@ function applyEnv(i){
   sun.intensity = p.si;
   amb.intensity = p.amb;
   floorMat.color.setHex(i === 1 ? 0x9aa0a8 : 0x0a0b0d);
-  scene.fog = new THREE.FogExp2(p.fogc, 0.0);
+  scene.fog = new THREE.FogExp2(p.fogc, 0.020);
   applySun();
   applyFogRain();
 }
 
 function applyFogRain(){
-  if (scene.fog) scene.fog.density = S.fog * 0.085;
+  if (scene.fog) scene.fog.density = 0.020 + S.fog * 0.070;
   // nasser Asphalt: Regen senkt Rauheit und hebt die Spiegelung
   floorMat.roughness = 0.62 - S.rain * 0.5;
   floorMat.metalness = 0.28 + S.rain * 0.5;
@@ -790,7 +799,7 @@ function tex(partName){
 
 function buildMaterials(){
   M.body = mkMat({ color:0xd40000, metalness:.72, roughness:.20,
-                   clearcoat:1, clearcoatRoughness:.05, side:THREE.FrontSide });
+                   clearcoat:1, clearcoatRoughness:.05 });
   M.trim = mkMat({ color:0x0b0b0d, metalness:.35, roughness:.14 });
   M.underbody = mkMat({ color:0x0b0b0c, metalness:0, roughness:.92 });
   M.engine = mkMat({ map:tex('engine'), color:0x9a9da3, metalness:.72, roughness:.38 });
@@ -842,7 +851,6 @@ function applyPaint(){
   M.body.roughness = f.roughness;
   M.body.clearcoat = f.clearcoat;
   M.body.clearcoatRoughness = f.ccRough;
-  M.body.needsUpdate = true;
 
   const t = TRIMS[S.trim][1];
   if (t === null){
@@ -856,23 +864,18 @@ function applyPaint(){
     M.trim.roughness = t.r;
     M.trim.clearcoat = .35;
   }
-  M.trim.needsUpdate = true;
 }
 function applyRim(){
   const [, c, m, r] = RIMS[S.rim];
   M.rim.color.setHex(c); M.rim.metalness = m; M.rim.roughness = r;
-  M.rim.needsUpdate = true;
 }
 function applyCalliper(){
   M.calliper.color.setHex(CALLIPERS[S.calliper][1]);
-  M.calliper.needsUpdate = true;
 }
 function applyLeather(){
   const [, a, b] = LEATHERS[S.leather];
   M.leather.color.setHex(a);
   M.interiorPattern.color.setHex(b);
-  M.interiorPattern.needsUpdate = true;
-  M.leather.needsUpdate = true;
 }
 function applyTint(){
   const t = S.tint / 100;
@@ -880,7 +883,6 @@ function applyTint(){
   M.glass.color.setRGB(0.05 + (1 - t) * 0.03, 0.06 + (1 - t) * 0.03, 0.07 + (1 - t) * 0.03);
   M.glass.roughness = 0.03 + t * 0.05;
   M.glassInner.transmission = 0.95 - t * 0.55;
-  M.glass.needsUpdate = M.glassInner.needsUpdate = true;
 }
 function applyLight(){
   const lv = [0, 0.35, 1][S.light];
@@ -889,11 +891,12 @@ function applyLight(){
   M.lensFront.transmission = 0.93;
   glowLampF.intensity = lv * 9;
   glowLampR.intensity = lv * 5;
-  M.glowFront.needsUpdate = M.glowRear.needsUpdate = true;
 }
+let rootBaseY = null;
 function applyRide(){
   if (!carRoot) return;
-  carRoot.position.y = S.ride * 0.001;   // S.ride in mm, -40..+60
+  if (rootBaseY === null) rootBaseY = carRoot.position.y;
+  carRoot.position.y = rootBaseY + S.ride * 0.001;   // S.ride in mm
   contact.material.opacity = 0.9 - Math.abs(S.ride) * 0.003;
 }
 function applyXray(){
@@ -927,16 +930,20 @@ const EXPLODE_DIR = {
 };
 const explodeHome = new Map();
 
-function registerExplode(obj, dir){
-  explodeHome.set(obj, { base: obj.position.clone(), dir: new THREE.Vector3(...dir) });
+function registerExplode(obj, dir, unit){
+  explodeHome.set(obj, { base: obj.position.clone(),
+                         dir: new THREE.Vector3(...dir).multiplyScalar(unit) });
 }
 function setupExplode(){
+  /* Alle Bauteile hängen unter dem quantisierten Wurzelknoten. Eine
+     Verschiebung von 1 dort entspricht carRoot.scale.x Metern. */
+  const unit = carRoot && carRoot.scale.x ? 1 / carRoot.scale.x : 1;
   for (const key in EXPLODE_DIR){
     const o = groups[key] || parts[key];
-    if (o) registerExplode(o, EXPLODE_DIR[key]);
+    if (o) registerExplode(o, EXPLODE_DIR[key], unit);
   }
   for (let g = 1; g <= 7; g++)
-    if (parts['grille'+g]) registerExplode(parts['grille'+g], [0, 0.1, 0.75]);
+    if (parts['grille'+g]) registerExplode(parts['grille'+g], [0, 0.1, 0.75], unit);
 }
 function applyExplode(){
   const e = S.explode;
@@ -1322,6 +1329,7 @@ function audioStep(dt){
 /* ================================================================ Kamera */
 let anim = null;
 const _v = new THREE.Vector3();
+const AXIS_Y = new THREE.Vector3(0, 1, 0);
 
 function frameDistance(radius){
   const vFov = THREE.MathUtils.degToRad(camera.fov);
@@ -1407,9 +1415,10 @@ function snapConfig(){
   for (const k of SKEYS) o[k] = S[k];
   return o;
 }
-function pushConfig(c){
-  for (const k of SKEYS) S[k] = c[k];
+function pushConfig(c, full){
+  for (const k of SKEYS) if (c[k] !== undefined) S[k] = c[k];
   applyPaint(); applyRim(); applyCalliper(); applyLeather(); applyTint(); applyLight();
+  if (full){ applyEnv(S.env); applyRide(); applyXray(); applyFogRain(); }
 }
 function compareToggle(){
   if (compareOn){ compareOn = false; toast('Vergleich aus'); }
@@ -1448,7 +1457,10 @@ function stepHotspots(){
   if (!on) return;
   for (const h of hotEls){
     _v.copy(h.pos);
-    if (carRoot) _v.y += carRoot.position.y;
+    if (carRoot){
+      _v.applyAxisAngle(AXIS_Y, carRoot.rotation.y);
+      _v.y += carRoot.position.y - (rootBaseY === null ? 0 : rootBaseY);
+    }
     _v.project(camera);
     const vis = _v.z < 1;
     h.el.style.display = vis ? 'block' : 'none';
@@ -1475,7 +1487,8 @@ function shoot(){
   renderer.setPixelRatio(1);
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  renderer.render(scene, camera);
+  if (S.dof && composer){ composer.setSize(w, h); composer.render(); }
+  else renderer.render(scene, camera);
 
   const src = renderer.domElement;
   const cv = document.createElement('canvas');
@@ -1497,6 +1510,7 @@ function shoot(){
 
   renderer.setPixelRatio(oldPR);
   renderer.setSize(size.x, size.y, false);
+  if (composer) composer.setSize(size.x, size.y);
   camera.aspect = oldA; camera.updateProjectionMatrix();
 
   cv.toBlob(b => {
@@ -1815,7 +1829,7 @@ function renderSaved(){
     const row = el('div', 'srow');
     const b = el('button', 'chip', it.name);
     b.addEventListener('click', () => {
-      pushConfig(it.cfg); syncUI(); pushURL(); toast('Geladen: ' + it.name);
+      pushConfig(it.cfg, true); syncUI(); pushURL(); toast('Geladen: ' + it.name);
     });
     const d = el('button', 'del', '×');
     d.addEventListener('click', () => {
@@ -1955,19 +1969,41 @@ function updateDof(){
 }
 
 /* ------------------------------------------------------------ Spiegelung */
+const _mNormal = new THREE.Vector3(), _mPlanePos = new THREE.Vector3();
+const _mCamPos = new THREE.Vector3(), _mView = new THREE.Vector3();
+const _mLook = new THREE.Vector3(), _mTarget = new THREE.Vector3();
+const _mRot = new THREE.Matrix4();
 function renderMirror(){
   if (S.reflect < 0.02 || V12.visible) return;
   const w = Math.max(2, Math.floor(innerWidth * 0.55));
   const h = Math.max(2, Math.floor(innerHeight * 0.55));
   if (mirrorRT.width !== w || mirrorRT.height !== h) mirrorRT.setSize(w, h);
 
-  mirrorCam.copy(camera);
-  mirrorCam.position.set(camera.position.x, -camera.position.y, camera.position.z);
-  mirrorCam.up.set(0, -1, 0);
-  mirrorCam.lookAt(controls.target.x, -controls.target.y, controls.target.z);
-  mirrorCam.aspect = camera.aspect;
-  mirrorCam.fov = camera.fov;
-  mirrorCam.updateProjectionMatrix();
+  /* Spiegelkamera nach dem Verfahren von THREE.Reflector: Position und
+     Blickziel an der Ebene y=0 spiegeln, up mitspiegeln. So bleibt die
+     Orientierung eine echte Drehung und die Flächen werden nicht wegkulled. */
+  mirror.updateMatrixWorld();
+  camera.updateMatrixWorld();
+  _mNormal.set(0, 0, 1).applyMatrix4(_mRot.extractRotation(mirror.matrixWorld));
+  _mPlanePos.setFromMatrixPosition(mirror.matrixWorld);
+  _mCamPos.setFromMatrixPosition(camera.matrixWorld);
+
+  _mView.subVectors(_mPlanePos, _mCamPos).reflect(_mNormal).negate().add(_mPlanePos);
+  _mRot.extractRotation(camera.matrixWorld);
+  _mLook.set(0, 0, -1).applyMatrix4(_mRot).add(_mCamPos);
+  _mTarget.subVectors(_mPlanePos, _mLook).reflect(_mNormal).negate().add(_mPlanePos);
+
+  mirrorCam.position.copy(_mView);
+  mirrorCam.up.set(0, 1, 0).applyMatrix4(_mRot).reflect(_mNormal);
+  mirrorCam.lookAt(_mTarget);
+  mirrorCam.near = camera.near; mirrorCam.far = camera.far;
+  mirrorCam.updateMatrixWorld();
+  mirrorCam.projectionMatrix.copy(camera.projectionMatrix);
+
+  textureMatrix.set(0.5, 0, 0, 0.5,  0, 0.5, 0, 0.5,  0, 0, 0.5, 0.5,  0, 0, 0, 1);
+  textureMatrix.multiply(mirrorCam.projectionMatrix);
+  textureMatrix.multiply(mirrorCam.matrixWorldInverse);
+  textureMatrix.multiply(mirror.matrixWorld);
 
   const vf = floor.visible, vm = mirror.visible, vc = contact.visible;
   const vr = rain ? rain.visible : false;
