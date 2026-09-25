@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="812 GTS">
+<link rel="manifest" href="manifest_v3_3a.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon_192_v3_0a.png">
+<title>Ferrari 812 GTS — Zenith</title>
+<style>
+:root{
+  --bg:#0a0a0c; --panel:rgba(18,18,21,.82); --panel-solid:#121215;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.18);
+  --fg:#f2f2f4; --fg2:rgba(242,242,244,.62); --fg3:rgba(242,242,244,.38);
+  --acc:#e0122a; --acc2:#ff2d46;
+  --sheet-h:min(54vh,460px);
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Inter,system-ui,sans-serif;
+  font-feature-settings:"tnum";overscroll-behavior:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+#app{position:fixed;inset:0}
+canvas{display:block;touch-action:none}
+
+/* ---------- Ladebildschirm ---------- */
+#loader{position:fixed;inset:0;z-index:100;background:#08080a;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:26px;
+  transition:opacity .7s ease,visibility .7s}
+#loader.gone{opacity:0;visibility:hidden}
+#loader .brand{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--fg3)}
+#loader .model{font-size:clamp(30px,8vw,52px);font-weight:200;letter-spacing:.16em}
+#loader .model b{font-weight:600;color:var(--acc2)}
+#bar{width:min(260px,62vw);height:2px;background:rgba(255,255,255,.10);overflow:hidden;border-radius:2px}
+#barfill{height:100%;width:0%;background:linear-gradient(90deg,var(--acc),#ff6a4d);
+  transition:width .25s ease;box-shadow:0 0 14px rgba(224,18,42,.7)}
+#pct{font-size:11px;letter-spacing:.3em;color:var(--fg3)}
+#lderr{font-size:12px;color:#ff7a7a;max-width:80vw;text-align:center;line-height:1.5;padding:0 20px}
+
+/* ---------- Kopfzeile ---------- */
+#top{position:absolute;top:calc(var(--safe-t) + 10px);left:0;right:0;z-index:20;
+  display:flex;align-items:flex-start;justify-content:space-between;padding:0 14px;
+  pointer-events:none}
+#title .k{font-size:9.5px;letter-spacing:.38em;color:var(--fg3);text-transform:uppercase}
+#title .n{font-size:17px;font-weight:600;letter-spacing:.06em;margin-top:3px}
+#tools{display:flex;gap:7px;pointer-events:auto}
+.tbtn{width:38px;height:38px;border-radius:11px;background:var(--panel);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid var(--line);display:grid;place-items:center;transition:.16s}
+.tbtn:active{transform:scale(.9)}
+.tbtn.on{background:var(--acc);border-color:var(--acc)}
+.tbtn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Ansichts-Leiste ---------- */
+#views{position:absolute;left:0;right:0;bottom:calc(var(--sheet-h) + 10px);z-index:18;
+  display:flex;gap:7px;padding:0 14px;overflow-x:auto;scrollbar-width:none;
+  transition:bottom .34s cubic-bezier(.32,.72,0,1)}
+#views::-webkit-scrollbar{display:none}
+body.collapsed #views{bottom:calc(62px + var(--safe-b) + 10px)}
+.vbtn{flex:0 0 auto;padding:7px 13px;border-radius:9px;background:var(--panel);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--line);
+  font-size:11.5px;letter-spacing:.04em;color:var(--fg2);white-space:nowrap;transition:.16s}
+.vbtn.on{background:#fff;color:#0a0a0c;border-color:#fff;font-weight:600}
+.vbtn:active{transform:scale(.94)}
+
+/* ---------- Teile-Hinweis ---------- */
+#tip{position:absolute;z-index:19;left:50%;transform:translate(-50%,8px);
+  bottom:calc(var(--sheet-h) + 56px);pointer-events:none;opacity:0;transition:.25s;
+  background:var(--panel);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid var(--line2);border-radius:12px;padding:10px 14px;max-width:min(320px,86vw)}
+#tip.on{opacity:1;transform:translate(-50%,0)}
+#tip .t{font-size:12.5px;font-weight:600;letter-spacing:.02em}
+#tip .d{font-size:10.5px;color:var(--fg2);margin-top:4px;line-height:1.5}
+body.collapsed #tip{bottom:calc(62px + var(--safe-b) + 56px)}
+
+/* ---------- Hotspots ---------- */
+#hotlayer{position:absolute;inset:0;z-index:17;display:none;pointer-events:none}
+.hot{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;
+  display:grid;place-items:center;pointer-events:auto}
+.hot .dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.92);
+  box-shadow:0 0 0 5px rgba(255,255,255,.18),0 2px 10px rgba(0,0,0,.5);
+  animation:pulse 2.4s infinite ease-out}
+@keyframes pulse{0%{box-shadow:0 0 0 4px rgba(255,255,255,.28),0 2px 10px rgba(0,0,0,.5)}
+  70%{box-shadow:0 0 0 13px rgba(255,255,255,0),0 2px 10px rgba(0,0,0,.5)}
+  100%{box-shadow:0 0 0 4px rgba(255,255,255,0),0 2px 10px rgba(0,0,0,.5)}}
+
+/* ---------- Trennlinie im Vergleich ---------- */
+#split{position:absolute;left:50%;top:0;bottom:0;width:1px;z-index:16;display:none;
+  background:rgba(255,255,255,.55);box-shadow:0 0 14px rgba(0,0,0,.6);pointer-events:none}
+#split::before,#split::after{position:absolute;top:calc(var(--safe-t) + 62px);
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+#split::before{content:'aktuell';right:10px}
+#split::after{content:'gemerkt';left:10px}
+
+/* ---------- Bedienfeld ---------- */
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:22;height:var(--sheet-h);
+  background:var(--panel);backdrop-filter:blur(26px) saturate(150%);
+  -webkit-backdrop-filter:blur(26px) saturate(150%);
+  border-top:1px solid var(--line);border-radius:20px 20px 0 0;
+  display:flex;flex-direction:column;padding-bottom:var(--safe-b);
+  transition:transform .34s cubic-bezier(.32,.72,0,1);
+  box-shadow:0 -22px 60px rgba(0,0,0,.6)}
+body.collapsed #sheet{transform:translateY(calc(var(--sheet-h) - 62px - var(--safe-b)))}
+#grip{height:22px;display:grid;place-items:center;flex:0 0 auto;cursor:pointer}
+#grip i{width:34px;height:4px;border-radius:4px;background:var(--line2);display:block}
+#tabs{display:flex;gap:4px;padding:0 10px 9px;overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+#tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:7px 12px;border-radius:9px;font-size:12px;letter-spacing:.03em;
+  color:var(--fg3);transition:.16s;white-space:nowrap}
+.tab.on{background:rgba(255,255,255,.10);color:var(--fg);font-weight:600}
+#pages{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:2px 14px 22px}
+.page{display:none}.page.on{display:block}
+.lbl{font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--fg3);
+  margin:15px 0 9px}
+.lbl:first-child{margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:9px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+
+.sw{position:relative;aspect-ratio:1;border-radius:11px;border:1px solid var(--line);
+  overflow:hidden;transition:.16s}
+.sw:active{transform:scale(.92)}
+.sw.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.28)}
+.chip{padding:8px 14px;border-radius:10px;border:1px solid var(--line);font-size:12px;
+  color:var(--fg2);transition:.16s;letter-spacing:.02em;white-space:nowrap}
+.chip:active{transform:scale(.94)}
+.chip.on{background:#fff;color:#0a0a0c;border-color:#fff;font-weight:600}
+.tg{padding:8px 14px;border-radius:10px;border:1px solid var(--line);font-size:12px;
+  color:var(--fg2);transition:.16s;margin:2px 8px 2px 0}
+.tg.on{background:#fff;color:#0a0a0c;border-color:#fff;font-weight:600}
+
+/* ---------- Regler ---------- */
+.slw{margin:10px 0 14px}
+.slh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;
+  font-size:12px;color:var(--fg2)}
+.slv{font-size:11.5px;color:var(--fg);font-weight:600}
+input.sl{width:100%;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;
+  background:rgba(255,255,255,.16);outline:none}
+input.sl::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;
+  border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+input.sl::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:0}
+
+/* ---------- Gas und Drehzahl ---------- */
+.gas{width:100%;padding:18px 0;border-radius:14px;border:1px solid var(--line2);
+  background:rgba(255,255,255,.04);font-size:13px;font-weight:600;letter-spacing:.06em;
+  margin:6px 0 12px;transition:.12s;touch-action:none;user-select:none}
+.gas.on{background:var(--acc);border-color:var(--acc);transform:scale(.985)}
+.tach{margin-bottom:6px}
+.tbar{height:6px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}
+.tbar i{display:block;height:100%;width:0%;border-radius:6px;
+  background:linear-gradient(90deg,#3ad07a,#f2c200 62%,#ff3b2f 88%);transition:width .06s linear}
+.tnum{font-size:11px;color:var(--fg2);margin-top:6px;letter-spacing:.06em}
+
+/* ---------- Tabellen ---------- */
+table.spec{width:100%;border-collapse:collapse;font-size:12px}
+table.spec td,table.spec th{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.055);
+  text-align:left;vertical-align:baseline}
+table.spec td:first-child{color:var(--fg3);font-size:11px;width:44%}
+table.spec td.v{font-weight:600;font-size:12.5px}
+table.cmp td{font-size:11.5px}
+table.cmp td:first-child{width:36%}
+table.cmp th{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg3)}
+table.cmp tr.hd th:first-child{width:36%}
+.note{font-size:10.5px;color:var(--fg3);line-height:1.6;margin-top:12px}
+.saved{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.srow{display:flex;gap:7px;align-items:center}
+.srow .chip{flex:1;text-align:left}
+.del{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
+  color:var(--fg3);font-size:16px;line-height:1}
+
+#toast{position:fixed;left:50%;bottom:calc(var(--sheet-h) + 24px);transform:translate(-50%,10px);
+  z-index:60;background:rgba(255,255,255,.96);color:#0a0a0c;font-size:12px;font-weight:600;
+  padding:9px 18px;border-radius:11px;opacity:0;transition:.28s;pointer-events:none;
+  max-width:88vw;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media(min-width:860px){
+  :root{--sheet-h:100%}
+  #sheet{left:auto;right:0;top:0;width:368px;height:100%;border-radius:0;
+    border-top:0;border-left:1px solid var(--line);padding-top:var(--safe-t)}
+  body.collapsed #sheet{transform:translateX(100%)}
+  #grip{display:none}
+  #tabs{padding-top:16px;flex-wrap:wrap;overflow:visible}
+  #views{bottom:22px;right:388px;left:0}
+  body.collapsed #views{bottom:22px;right:20px}
+  #top{right:auto;width:calc(100% - 388px)}
+  #toast{bottom:32px;left:calc(50% - 184px)}
+  #tip{bottom:78px;left:calc(50% - 184px)}
+  body.collapsed #tip{bottom:78px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="hotlayer"></div>
+<div id="split"></div>
+
+<div id="loader">
+  <div class="brand">Zenith Project</div>
+  <div class="model">812 <b>GTS</b></div>
+  <div id="bar"><div id="barfill"></div></div>
+  <div id="pct">0 %</div>
+  <div id="lderr"></div>
+</div>
+
+<div id="top">
+  <div id="title">
+    <div class="k">Zenith Project</div>
+    <div class="n">812 GTS</div>
+  </div>
+  <div id="tools">
+    <button class="tbtn" id="bSpin" title="Drehteller" aria-label="Drehteller">
+      <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/></svg>
+    </button>
+    <button class="tbtn" id="bShot" title="Foto" aria-label="Foto">
+      <svg viewBox="0 0 24 24"><path d="M3 8h3l2-2h8l2 2h3v12H3z"/><circle cx="12" cy="13" r="3.6"/></svg>
+    </button>
+    <button class="tbtn" id="bSheet" title="Bedienfeld" aria-label="Bedienfeld">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="views"></div>
+<div id="tip"><div class="t"></div><div class="d"></div></div>
+
+<div id="sheet">
+  <div id="grip"><i></i></div>
+  <div id="tabs"></div>
+  <div id="pages"></div>
+</div>
+
+<div id="toast"></div>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const MODEL_SOURCES = [
+  'ferrari_812_gts_v3_3a.glb',
+  'https://raw.githubusercontent.com/rpdfrk7pxt-star/zenith-project/main/ferrari_812_gts_v3_3a.glb',
+];
+
+/* ------------------------------------------------------------------ Lack */
+const PAINTS = [
+  ['Rosso Corsa',        0xd40000], ['Rosso Scuderia',    0xef1000],
+  ['Rosso Fuoco',        0x9c0512], ['Rosso Mugello',     0x7a0a18],
+  ['Giallo Modena',      0xf5c400], ['Nero Daytona',      0x101012],
+  ['Grigio Silverstone', 0x8e9296], ['Grigio Titanio',    0x5d6166],
+  ['Canna di Fucile',    0x3b4046], ['Bianco Avus',       0xeceff2],
+  ['Argento Nürburgring',0xb9bfc6], ['Blu Tour de France',0x0d2a6b],
+  ['Blu Corsa',          0x1740a8], ['Blu Pozzi',         0x2a5fa8],
+  ['Verde British',      0x0f3d2a], ['Marrone Bronzo',    0x5a3a24],
+];
+const FINISHES = [
+  ['Unilack',  { metalness:.08, roughness:.22, clearcoat:1.0, ccRough:.03 }],
+  ['Metallic', { metalness:.72, roughness:.20, clearcoat:1.0, ccRough:.05 }],
+  ['Satin',    { metalness:.55, roughness:.44, clearcoat:.55, ccRough:.32 }],
+  ['Matt',     { metalness:.28, roughness:.72, clearcoat:.12, ccRough:.60 }],
+];
+const RIMS = [
+  ['Schwarz glanz',  0x0e0e10, .85, .18],
+  ['Schwarz matt',   0x121214, .55, .58],
+  ['Silber',         0xc9ccd2, .95, .18],
+  ['Titan',          0x8c8f95, .92, .30],
+  ['Gold',           0xc79a3c, .95, .22],
+  ['Bronze',         0x8a6236, .90, .30],
+  ['Weiß',           0xe8eaee, .35, .28],
+];
+const CALLIPERS = [
+  ['Rot',     0xd81b0e], ['Gelb',    0xf2c200], ['Schwarz', 0x121214],
+  ['Silber',  0xb9bcc2], ['Blau',    0x14479e], ['Grün',    0x1c7a3c],
+];
+const LEATHERS = [
+  ['Nero',     0x1a1a1c, 0x242428], ['Cuoio',    0x7a5230, 0x8d6038],
+  ['Rosso',    0x6e1418, 0x7f171c], ['Sabbia',   0xa89577, 0xb6a184],
+  ['Blu Sterling', 0x1d2a44, 0x24354f], ['Grigio Scuro', 0x3a3d42, 0x45484e],
+];
+const TRIMS = [
+  ['Wagenfarbe',    null],
+  ['Glanzschwarz',  { c:0x0b0b0d, m:.35, r:.14 }],
+  ['Karbon',        { c:0x131418, m:.55, r:.36 }],
+  ['Silber',        { c:0xb4b8be, m:.92, r:.26 }],
+];
+const ENVS = [
+  ['Studio',      { top:0x2b2f36, bot:0x0b0c0e, sun:0xfff3e2, si:2.4, amb:.55, fogc:0x101216 }],
+  ['Showroom',    { top:0xe9edf3, bot:0xbfc6cf, sun:0xffffff, si:1.9, amb:1.05, fogc:0xd3d9e0 }],
+  ['Sonnenuntergang', { top:0x2a1c3a, bot:0xd4703a, sun:0xffb070, si:3.0, amb:.45, fogc:0x3a2436 }],
+  ['Nacht',       { top:0x05070d, bot:0x0a0d14, sun:0x6a86c8, si:.55, amb:.22, fogc:0x05070c }],
+];
+const LIGHTMODES = ['Aus', 'Standlicht', 'Voll'];
+
+/* --------------------------------------------------------------- Ansichten */
+const VIEWS = [
+  ['Hero',         { az:  0.82, el: 0.20, r:1.00, t:[0,.58,.10] }],
+  ['Front',        { az:  0.00, el: 0.13, r:0.96, t:[0,.55,.20] }],
+  ['Seite',        { az:  1.5708, el:0.055, r:0.98, t:[0,.56,0] }],
+  ['Heck 3/4',     { az: -2.32, el: 0.21, r:1.00, t:[0,.58,-.10] }],
+  ['Heck',         { az:  3.1416, el:0.14, r:0.96, t:[0,.58,-.20] }],
+  ['Draufsicht',   { az:  0.30, el: 1.30, r:1.05, t:[0,.45,0] }],
+  ['Rad',          { az:  1.15, el: 0.10, r:0.36, t:[.72,.36,1.36] }],
+  ['Scheinwerfer', { az:  0.62, el: 0.18, r:0.40, t:[.62,.63,1.94] }],
+  ['Heckleuchten', { az: -2.55, el: 0.17, r:0.42, t:[.55,.80,-2.10] }],
+  ['Cockpit',      { fixed:[0.38,0.95,-0.28], look:[0.36,0.86,1.30], fov:68 }],
+  ['Motor',        { engine:true, az:0.9, el:0.32, r:0.5 }],
+];
+
+/* ------------------------------------------------------------- Bauteilinfo */
+const PARTINFO = {
+  body:['Karosserie','Aluminium-Spaceframe mit tragenden Außenhautteilen. Der Cw-Wert liegt trotz 800 PS bei rund 0,33.'],
+  tonneau:['Verdeckkastendeckel','Hebt sich an, bevor das Dach dahinter einfaehrt, und schliesst danach wieder. Antippen oeffnet das Verdeck.'],
+  hood:['Motorhaube','Vorn angeschlagen, mit zwei Entlüftungskanälen, die heiße Luft aus dem Motorraum über die Flanken abführen.'],
+  doorLBody:['Fahrertür','Antippen öffnet und schließt sie.'],
+  doorRBody:['Beifahrertür','Antippen öffnet und schließt sie.'],
+  doorLTrim:['Türzierteil','Fensterbrüstung und Spiegelfuß.'],
+  doorRTrim:['Türzierteil','Fensterbrüstung und Spiegelfuß.'],
+  doorLInner:['Türverkleidung','Griffmulde, Lautsprecher und Ablage.'],
+  doorRInner:['Türverkleidung','Griffmulde, Lautsprecher und Ablage.'],
+  doorLGlass:['Seitenscheibe','Verbundglas, rahmenlos geführt.'],
+  doorRGlass:['Seitenscheibe','Verbundglas, rahmenlos geführt.'],
+  trim:['Aerodynamik-Zierteile','Splitter, Schweller, Diffusorlamellen und Lufteinlässe — im Konfigurator getrennt lackierbar.'],
+  underbody:['Unterboden','Vollverkleidet mit Heckdiffusor für Abtrieb ohne sichtbaren Flügel.'],
+  engine:['Motorraum','Verkleidung und Haubeninnenseite. Der Motor selbst ist unter „Motor“ freigestellt zu sehen.'],
+  interior:['Armaturenbrett','Fahrerorientiertes Layout, digitales Kombiinstrument, Manettino am Lenkrad.'],
+  wheelHub:['Lenkradnabe','Trägt das Cavallino Rampante — das sich aufbäumende Pferd aus dem Wappen von Francesco Baracca.'],
+  interiorPattern:['Leder perforiert','Perforierte Sitzflächen und Türverkleidungen.'],
+  leather:['Lederzone','Farbig absetzbare Ledersegmente in Sitzen und Türen.'],
+  seatbelt:['Sicherheitsgurt','Vierpunkt-Option ab Werk erhältlich.'],
+  glass:['Windschutzscheibe','Verbundglas mit Infrarotfilter.'],
+  glassInner:['Innenverglasung','Windschott und Trennscheibe hinter den Sitzen.'],
+  lensFront:['Scheinwerferglas','Klare Abdeckung über der LED-Matrix.'],
+  lensRear:['Rückleuchtenglas','Rot eingefärbtes Polycarbonat.'],
+  lightFront:['Scheinwerfer','LED-Matrix mit Tagfahrlichtsignatur in L-Form.'],
+  lightRear:['Rückleuchten','Die zwei runden Leuchten je Seite zitieren den 365 GTB/4 Daytona.'],
+  glowFront:['Lichtaustritt vorn','Leuchtet mit der Lichtstufe.'],
+  glowRear:['Lichtaustritt hinten','Leuchtet mit der Lichtstufe.'],
+  badge:['Emblem','Cavallino Rampante auf Frontgrill und Kotflügeln.'],
+  plate:['Kennzeichen','Europäisches Format.'],
+  plateText:['Typenschild','Modellbezeichnung 812 GTS.'],
+  rim:['Felge','20 Zoll geschmiedet, sieben Doppelspeichen.'],
+  brake:['Bremsscheibe','Karbon-Keramik, 398 mm vorn, 360 mm hinten.'],
+  tyre:['Reifen','275/35 ZR20 vorn, 315/35 ZR20 hinten.'],
+  calliper:['Bremssattel','Sechs Kolben vorn, vier hinten.'],
+};
+for (const p of ['FL','FR','RL','RR']) {
+  PARTINFO['rim'+p] = PARTINFO.rim;
+  PARTINFO['brake'+p] = PARTINFO.brake;
+  PARTINFO['tyre'+p] = PARTINFO.tyre;
+  PARTINFO['calliper'+p] = PARTINFO.calliper;
+}
+for (let g = 1; g <= 7; g++) PARTINFO['grille'+g] = ['Gitter','Lufteinlass mit Wabengitter für Kühlung und Bremsenbelüftung.'];
+
+/* ----------------------------------------------------------------- Hotspots */
+const HOTSPOTS = [
+  [[0, .18, 2.28],  'Frontsplitter', 'Teilt den Luftstrom und erzeugt Abtrieb an der Vorderachse, ohne den Luftwiderstand nennenswert zu erhöhen.'],
+  [[0, .88, 1.55],  'Haubenentlüftung', 'Führt heiße Luft aus dem Motorraum ab und senkt gleichzeitig den Auftrieb über der Vorderachse.'],
+  [[.97, .52, .92], 'Seitlicher Auslass', 'Leitet die Luft aus den Radhäusern heraus und legt sie an die Flanke an.'],
+  [[0, 1.02, -1.92],'Abrisskante', 'Der Heckabschluss ersetzt einen Flügel — der Abtrieb entsteht über die Kante statt über ein Anbauteil.'],
+  [[0, .22, -2.24], 'Heckdiffusor', 'Beschleunigt die Luft unter dem Wagen und saugt das Heck auf die Straße.'],
+  [[.36, .36, -2.28],'Auspuffendrohre', 'Der V12 atmet über vier Endrohre aus; darin liegen die klappengesteuerten Nachschalldämpfer.'],
+  [[.86, .36, 1.39],'Karbon-Keramik-Bremse', '398 mm vorn, sechs Kolben. Kalt wie heiß derselbe Druckpunkt.'],
+  [[0, 1.12, -.92], 'Windschott', 'Hält bei offenem Verdeck die Verwirbelung aus dem Innenraum.'],
+];
+
+/* ------------------------------------------------------------ Technik-Daten */
+const SPECS = [
+  ['Motor', '6,5-l-V12, 65° Zylinderwinkel, Saugmotor'],
+  ['Motorcode', 'F140 GA'],
+  ['Hubraum', '6496 cm³'],
+  ['Leistung', '800 PS bei 8500/min'],
+  ['Drehmoment', '718 Nm bei 7000/min'],
+  ['Höchstdrehzahl', '8900/min'],
+  ['Literleistung', '123 PS/l'],
+  ['Getriebe', '7-Gang-Doppelkupplung'],
+  ['Antrieb', 'Heckantrieb, Transaxle'],
+  ['0–100 km/h', '2,9 s'],
+  ['0–200 km/h', '8,3 s'],
+  ['Höchstgeschwindigkeit', 'über 340 km/h'],
+  ['Trockengewicht', '1600 kg'],
+  ['Gewichtsverteilung', '47 % vorn / 53 % hinten'],
+  ['Länge', '4693 mm'],
+  ['Breite', '1971 mm'],
+  ['Höhe', '1276 mm'],
+  ['Radstand', '2720 mm'],
+  ['Tankinhalt', '92 l'],
+  ['Verdeck', 'Klappdach, 14 s, bis 45 km/h'],
+  ['Räder', '275/35 ZR20 vorn, 315/35 ZR20 hinten'],
+  ['Bremsen', 'Karbon-Keramik 398/360 mm'],
+];
+
+const COMPARE = [
+  ['', '812 GTS', '812 Superfast'],
+  ['Aufbau', 'Targa mit Klappdach', 'Coupé'],
+  ['Leistung', '800 PS', '800 PS'],
+  ['Drehmoment', '718 Nm', '718 Nm'],
+  ['0–100 km/h', '2,9 s', '2,9 s'],
+  ['0–200 km/h', '8,3 s', '7,9 s'],
+  ['Höchstgeschwindigkeit', 'über 340 km/h', '340 km/h'],
+  ['Trockengewicht', '1600 kg', '1525 kg'],
+  ['Bauzeit', 'ab 2019', '2017–2021'],
+];
+
+/* -------------------------------------------------------------- Zustand */
+const S = {
+  paint:0, finish:1, rim:0, calliper:0, leather:0, trim:1,
+  tint:35, light:0, env:0, view:0,
+  spin:false, ride:0, steer:0, doors:0, hood:0, explode:0,
+  xray:0, rain:0, fog:0, sun:0.55, lamp:0.0,
+  dof:0, aperture:0.5, reflect:1, hotspots:0,
+  sound:0, rpm:0.0, ratio:0, mark:1, vol:0.6, lampAz:0.9, roof:0,
+};
+const DEFAULTS = JSON.parse(JSON.stringify(S));
+
+const SKEYS = ['paint','finish','rim','calliper','leather','trim','tint','light','env',
+               'ride','steer','xray','rain','fog','sun','lamp','reflect'];
+
+function encodeState(){
+  return SKEYS.map(k => Math.round((+S[k] || 0) * 100)).join('.');
+}
+function decodeState(str){
+  if (!str) return;
+  const a = str.split('.').map(Number);
+  SKEYS.forEach((k, i) => {
+    if (i < a.length && Number.isFinite(a[i])) S[k] = a[i] / 100;
+  });
+  ['paint','finish','rim','calliper','leather','trim','light','env']
+    .forEach(k => S[k] = Math.round(S[k]));
+  S.tint = Math.round(S.tint);
+}
+/* =================================================================== Szene */
+const host = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({
+  antialias:true, alpha:false, powerPreference:'high-performance',
+  preserveDrawingBuffer:true,
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+host.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, innerWidth/innerHeight, 0.05, 260);
+camera.position.set(6.2, 2.0, 6.6);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.075;
+controls.minDistance = 1.1;
+controls.maxDistance = 46;
+controls.minPolarAngle = 0.05;
+controls.maxPolarAngle = Math.PI * 0.497;
+controls.target.set(0, 0.58, 0.10);
+/* Zwei Finger verschieben das Bild, ein Finger dreht. */
+controls.enablePan = true;
+controls.screenSpacePanning = true;
+controls.panSpeed = 0.9;
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+
+/* --------------------------------------------------------------- Himmel */
+const bgUni = {
+  top:   { value: new THREE.Color(0x2b2f36) },
+  bot:   { value: new THREE.Color(0x0b0c0e) },
+  sunDir:{ value: new THREE.Vector3(0.4, 0.5, 0.6) },
+  sunCol:{ value: new THREE.Color(0xfff3e2) },
+  sunAmt:{ value: 0.0 },
+};
+const sky = new THREE.Mesh(
+  new THREE.SphereGeometry(140, 32, 20),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite:false,
+    uniforms: bgUni,
+    vertexShader:`varying vec3 vP; void main(){ vP = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader:`
+      uniform vec3 top, bot, sunCol; uniform vec3 sunDir; uniform float sunAmt;
+      varying vec3 vP;
+      vec3 srgb(vec3 c){ return mix(c*12.92, 1.055*pow(max(c,1e-5), vec3(1.0/2.4))-0.055,
+                                    step(0.0031308, c)); }
+      void main(){
+        vec3 d = normalize(vP);
+        float h = clamp(d.y*0.5+0.5, 0.0, 1.0);
+        vec3 c = mix(bot, top, pow(h, 0.85));
+        float s = max(dot(d, normalize(sunDir)), 0.0);
+        c += sunCol * (pow(s, 18.0) * 0.9 + pow(s, 3.0) * 0.18) * sunAmt;
+        gl_FragColor = vec4(srgb(c), 1.0);
+      }`,
+  }));
+sky.frustumCulled = false;
+scene.add(sky);
+
+/* ---------------------------------------------------------------- Boden */
+const floorMat = new THREE.MeshStandardMaterial({
+  color:0x0a0b0d, roughness:0.62, metalness:0.28,
+});
+floorMat.envMapIntensity = 0.42;
+const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 128), floorMat);
+floor.rotation.x = -Math.PI/2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+/* Spiegelung: zweite Kamera unter dem Boden in eine Textur, weich eingeblendet. */
+const mirrorRT = new THREE.WebGLRenderTarget(1, 1, {
+  minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+  type: THREE.HalfFloatType, generateMipmaps:false,
+});
+const mirrorCam = new THREE.PerspectiveCamera();
+/* Die Spiegeltextur wird über die Matrix der SPIEGELKAMERA projiziert.
+   Nimmt man dafür die Clip-Position der Hauptkamera, sitzt das Spiegelbild
+   versetzt neben dem Objekt. */
+const textureMatrix = new THREE.Matrix4();
+const mirrorMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  uniforms:{ tex:{ value: mirrorRT.texture }, amt:{ value: 0.34 },
+             textureMatrix:{ value: textureMatrix } },
+  vertexShader:`
+    uniform mat4 textureMatrix;
+    varying vec4 vUvR; varying vec3 vW;
+    void main(){
+      vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz;
+      vUvR = textureMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * viewMatrix * w;
+    }`,
+  fragmentShader:`
+    uniform sampler2D tex; uniform float amt;
+    varying vec4 vUvR; varying vec3 vW;
+    void main(){
+      vec3 c = texture2DProj(tex, vUvR).rgb;
+      float d = length(vW.xz);
+      float fade = smoothstep(12.0, 1.0, d);
+      gl_FragColor = vec4(c, amt * fade);
+    }`,
+});
+const mirror = new THREE.Mesh(new THREE.CircleGeometry(14, 96), mirrorMat);
+mirror.rotation.x = -Math.PI/2;
+mirror.position.y = 0.002;
+mirror.renderOrder = -1;
+scene.add(mirror);
+
+/* Kontaktschatten unter dem Wagen */
+function contactTexture(){
+  const s = 256, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  const gr = g.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2);
+  gr.addColorStop(0,   'rgba(0,0,0,0.85)');
+  gr.addColorStop(0.42,'rgba(0,0,0,0.45)');
+  gr.addColorStop(0.75,'rgba(0,0,0,0.12)');
+  gr.addColorStop(1,   'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const contact = new THREE.Mesh(
+  new THREE.PlaneGeometry(6.2, 3.1),
+  new THREE.MeshBasicMaterial({ map:contactTexture(), transparent:true,
+                                depthWrite:false, opacity:0.9 }));
+contact.rotation.x = -Math.PI/2;
+contact.position.y = 0.006;
+contact.renderOrder = 0;
+scene.add(contact);
+
+/* ---------------------------------------------------------------- Licht */
+const sun = new THREE.DirectionalLight(0xfff3e2, 2.4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 30;
+sun.shadow.camera.left = -5; sun.shadow.camera.right = 5;
+sun.shadow.camera.top = 5;   sun.shadow.camera.bottom = -5;
+sun.shadow.bias = -0.0008;
+sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+
+const amb = new THREE.HemisphereLight(0xcfd8e6, 0x14161a, 0.55);
+scene.add(amb);
+
+/* frei drehbares Studiolicht */
+const lamp = new THREE.SpotLight(0xffffff, 0, 24, 0.62, 0.55, 1.4);
+lamp.position.set(4, 5, 4);
+scene.add(lamp, lamp.target);
+
+const glowLampF = new THREE.PointLight(0xfff0d8, 0, 6, 2);
+glowLampF.position.set(0, .68, 2.35);
+const glowLampR = new THREE.PointLight(0xff2a14, 0, 5, 2);
+glowLampR.position.set(0, .82, -2.35);
+scene.add(glowLampF, glowLampR);
+
+/* Sonnenstand 0 = Morgen, 1 = Nacht */
+function applySun(){
+  const t = S.sun;
+  const ang = (0.08 + t * 0.86) * Math.PI;          // über den Himmel
+  const y = Math.sin(ang), x = Math.cos(ang);
+  sun.position.set(x * 9, Math.max(y, -0.15) * 9 + 0.5, 4.2);
+  sun.target.position.set(0, 0.5, 0);
+  const low = Math.pow(1 - Math.min(y * 1.35, 1), 1.6);    // tief stehend -> warm
+  const col = new THREE.Color(0xfff3e2).lerp(new THREE.Color(0xff8a3c), low * 0.85);
+  sun.color.copy(col);
+  bgUni.sunDir.value.copy(sun.position).normalize();
+  bgUni.sunCol.value.copy(col);
+  bgUni.sunAmt.value = Math.max(y, 0) * 0.9 + 0.1;
+  lamp.target.position.set(0, 0.55, 0);
+}
+
+/* --------------------------------------------------------------- Regen */
+const RAIN_N = 2600;
+let rain = null;
+function buildRain(){
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(RAIN_N * 3);
+  const spd = new Float32Array(RAIN_N);
+  for (let i = 0; i < RAIN_N; i++){
+    pos[i*3]   = (Math.random() - .5) * 26;
+    pos[i*3+1] = Math.random() * 13;
+    pos[i*3+2] = (Math.random() - .5) * 26;
+    spd[i] = 9 + Math.random() * 9;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.userData.spd = spd;
+  rain = new THREE.Points(g, new THREE.PointsMaterial({
+    color:0xaecbe8, size:0.035, transparent:true, opacity:0.0,
+    depthWrite:false, sizeAttenuation:true }));
+  rain.frustumCulled = false;
+  scene.add(rain);
+}
+function stepRain(dt){
+  if (!rain) return;
+  rain.material.opacity = S.rain * 0.62;
+  rain.visible = S.rain > 0.01;
+  if (!rain.visible) return;
+  const p = rain.geometry.attributes.position.array;
+  const spd = rain.geometry.userData.spd;
+  const cx = camera.position.x, cz = camera.position.z;
+  for (let i = 0; i < RAIN_N; i++){
+    p[i*3+1] -= spd[i] * dt * (0.5 + S.rain);
+    if (p[i*3+1] < 0){
+      p[i*3+1] = 12 + Math.random() * 2;
+      p[i*3]   = cx + (Math.random() - .5) * 26;
+      p[i*3+2] = cz + (Math.random() - .5) * 26;
+    }
+  }
+  rain.geometry.attributes.position.needsUpdate = true;
+}
+
+/* --------------------------------------------- prozedurale HDR-Umgebung */
+const pmrem = new THREE.PMREMGenerator(renderer);
+let envRT = null;
+
+function hdrBox(w, h, d, x, y, z, rx, ry, rgb, intensity){
+  const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(rgb), side: THREE.DoubleSide });
+  m.color.multiplyScalar(intensity);
+  m.toneMapped = false;
+  const b = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
+  b.position.set(x, y, z);
+  b.rotation.set(rx, ry, 0);
+  return b;
+}
+
+function buildEnvScene(p){
+  const s = new THREE.Scene();
+  const bg = new THREE.Mesh(
+    new THREE.SphereGeometry(60, 24, 16),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      uniforms:{ a:{ value:new THREE.Color(p.top) }, b:{ value:new THREE.Color(p.bot) } },
+      vertexShader:'varying vec3 v; void main(){ v = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+      fragmentShader:'uniform vec3 a,b; varying vec3 v; void main(){ float h = clamp(normalize(v).y*.5+.5,0.,1.); gl_FragColor = vec4(mix(b,a,pow(h,.8)),1.); }',
+    }));
+  s.add(bg);
+  // Softboxen: zwei seitliche Flächen, ein Deckenstreifen, zwei Kanten hinten
+  s.add(hdrBox(16, 7, 1,  -11, 5.0, 0,  0,  Math.PI/2, 0xffffff, p.si * 3.2));
+  s.add(hdrBox(16, 7, 1,   11, 5.0, 0,  0, -Math.PI/2, 0xffffff, p.si * 2.4));
+  s.add(hdrBox(22, 9, 1,    0, 11.5, 0, Math.PI/2, 0, 0xffffff, p.si * 2.8));
+  s.add(hdrBox(10, 4, 1,   -5, 3.2, -13, 0, 0, 0xbcd0ff, p.si * 1.3));
+  s.add(hdrBox(10, 4, 1,    6, 3.4,  13, 0, Math.PI, 0xffd9b0, p.si * 1.5));
+  s.add(hdrBox(30, 30, 1,   0, -0.6, 0, -Math.PI/2, 0, p.bot, 0.55));
+  return s;
+}
+
+function applyEnv(i){
+  const p = ENVS[i][1];
+  if (envRT) envRT.dispose();
+  const es = buildEnvScene(p);
+  envRT = pmrem.fromScene(es, 0.02);
+  scene.environment = envRT.texture;
+  es.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+  bgUni.top.value.setHex(p.top);
+  bgUni.bot.value.setHex(p.bot);
+  sun.intensity = p.si;
+  amb.intensity = p.amb;
+  floorMat.color.setHex(i === 1 ? 0x9aa0a8 : 0x0a0b0d);
+  scene.fog = new THREE.FogExp2(p.fogc, 0.020);
+  applySun();
+  applyFogRain();
+}
+
+function applyFogRain(){
+  if (scene.fog) scene.fog.density = 0.020 + S.fog * 0.070;
+  // nasser Asphalt: Regen senkt Rauheit und hebt die Spiegelung
+  floorMat.roughness = 0.62 - S.rain * 0.5;
+  floorMat.metalness = 0.28 + S.rain * 0.5;
+  mirrorMat.uniforms.amt.value = S.reflect * (0.30 + S.rain * 0.4);
+  mirror.visible = S.reflect > 0.02;
+  lamp.intensity = S.lamp * 55;
+}
+buildRain();
+/* ================================================================== Modell */
+const parts = {};          // Bauteilname -> Mesh
+const groups = {};         // Pivotknoten -> Object3D
+const M = {};              // Materialschlüssel -> Material
+let carRoot = null;
+
+const barfill = document.getElementById('barfill');
+const pctEl   = document.getElementById('pct');
+const lderr   = document.getElementById('lderr');
+
+function setProgress(p){
+  const v = Math.max(0, Math.min(1, p));
+  barfill.style.width = (v * 100).toFixed(1) + '%';
+  pctEl.textContent = Math.round(v * 100) + ' %';
+}
+
+async function fetchModel(){
+  let lastErr = null;
+  for (const url of MODEL_SOURCES){
+    try {
+      const res = await fetch(url, { cache:'force-cache' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const total = +res.headers.get('content-length') || 6.0e6;
+      const reader = res.body && res.body.getReader ? res.body.getReader() : null;
+      if (!reader) { setProgress(0.9); return await res.arrayBuffer(); }
+      const chunks = []; let got = 0;
+      for (;;){
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value); got += value.length;
+        setProgress(Math.min(got / total, 0.985));
+      }
+      const buf = new Uint8Array(got); let o = 0;
+      for (const c of chunks){ buf.set(c, o); o += c.length; }
+      setProgress(1);
+      return buf.buffer;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('unbekannt');
+}
+
+/* ----------------------------------------------------------- Materialien */
+const MATOF = {};          // Bauteil -> Materialschlüssel
+(function(){
+  const map = {
+    body:['body','doorLBody','doorRBody','hood','tonneau'],
+    trim:['trim','doorLTrim','doorRTrim'],
+    interior:['interior','doorLInner','doorRInner'],
+    glass:['glass','doorLGlass','doorRGlass'],
+    rim:['rimFL','rimFR','rimRL','rimRR'],
+    brake:['brakeFL','brakeFR','brakeRL','brakeRR'],
+    tyre:['tyreFL','tyreFR','tyreRL','tyreRR'],
+    calliper:['calliperFL','calliperFR','calliperRL','calliperRR'],
+  };
+  for (const k in map) for (const p of map[k]) MATOF[p] = k;
+  for (const p of ['underbody','engine','interiorPattern','leather','seatbelt','wheelHub',
+                   'glassInner','lensFront','lensRear','lightFront','lightRear',
+                   'glowFront','glowRear','badge','plate','plateText'])
+    MATOF[p] = p;
+  for (let g = 1; g <= 7; g++) MATOF['grille'+g] = 'grille';
+})();
+
+function mkMat(o){
+  const m = new THREE.MeshPhysicalMaterial(Object.assign({ side: THREE.DoubleSide }, o));
+  m.envMapIntensity = 1.0;
+  return m;
+}
+function tex(partName){
+  const p = parts[partName];
+  if (!p) return null;
+  const t = p.material && p.material.map ? p.material.map : null;
+  if (t){ t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; }
+  return t;
+}
+
+function buildMaterials(){
+  M.body = mkMat({ color:0xd40000, metalness:.72, roughness:.20,
+                   clearcoat:1, clearcoatRoughness:.05 });
+  M.trim = mkMat({ color:0x0b0b0d, metalness:.35, roughness:.14 });
+  M.underbody = mkMat({ color:0x0b0b0c, metalness:0, roughness:.92 });
+  M.engine = mkMat({ map:tex('engine'), color:0x9a9da3, metalness:.72, roughness:.38 });
+  M.interior = mkMat({ map:tex('interior'), color:0x50525a, metalness:.15, roughness:.62 });
+  /* Nabe mit dem Cavallino: weiße Basisfarbe, damit das Wappen voll durchkommt */
+  M.wheelHub = mkMat({ map:tex('wheelHub'), color:0xffffff, metalness:.25, roughness:.42 });
+  M.interiorPattern = mkMat({ map:tex('interiorPattern'), metalness:0, roughness:.72 });
+  M.leather = mkMat({ color:0x1a1a1c, metalness:0, roughness:.78, sheen:.35,
+                      sheenRoughness:.7, sheenColor:new THREE.Color(0x776655) });
+  M.seatbelt = mkMat({ color:0x8a0f12, metalness:0, roughness:.9 });
+  M.rim = mkMat({ color:0x0e0e10, metalness:.85, roughness:.18 });
+  M.brake = mkMat({ map:tex('brakeFL'), color:0x8f9298, metalness:.75, roughness:.36 });
+  M.tyre = mkMat({ map:tex('tyreFL'), color:0x34363a, metalness:0, roughness:.96 });
+  M.calliper = mkMat({ color:0xd81b0e, metalness:.35, roughness:.22, clearcoat:.6 });
+  M.glass = mkMat({ color:0x0a0d10, metalness:0, roughness:.03, transmission:.92,
+                    thickness:.012, ior:1.52, transparent:true, opacity:1 });
+  M.glassInner = mkMat({ color:0x0a0d10, metalness:0, roughness:.05, transmission:.94,
+                         thickness:.008, ior:1.52, transparent:true });
+  M.lensFront = mkMat({ color:0xdfe6ef, metalness:0, roughness:.02, transmission:.93,
+                        thickness:.02, ior:1.48, transparent:true });
+  M.lensRear = mkMat({ color:0xb8140c, metalness:0, roughness:.04, transmission:.82,
+                       thickness:.02, ior:1.48, transparent:true });
+  M.lightFront = mkMat({ map:tex('lightFront'), color:0xc8ccd2, metalness:.88, roughness:.14 });
+  M.lightRear = mkMat({ map:tex('lightRear'), color:0x8e1410, metalness:.55, roughness:.22 });
+  M.glowFront = mkMat({ color:0x0e0f11, emissive:0xfff1dc, emissiveIntensity:0,
+                        metalness:0, roughness:.45 });
+  M.glowRear = mkMat({ color:0x140404, emissive:0xff2008, emissiveIntensity:0,
+                       metalness:0, roughness:.45 });
+  M.badge = mkMat({ map:tex('badge'), color:0xffffff, metalness:.55, roughness:.18,
+                    transparent:true, alphaTest:.35 });
+  M.plate = mkMat({ color:0xe8e8e4, metalness:0, roughness:.55 });
+  M.plateText = mkMat({ map:tex('plateText'), color:0xffffff, metalness:.2, roughness:.5,
+                        transparent:true, alphaTest:.3 });
+  M.grille = mkMat({ color:0x08080a, metalness:.45, roughness:.62,
+                     transparent:true, alphaTest:.4 });
+
+  for (const name in parts){
+    const key = MATOF[name];
+    if (key && M[key]) parts[name].material = M[key];
+  }
+}
+
+/* -------------------------------------------------------- Konfiguration */
+function applyPaint(){
+  const [, col] = PAINTS[S.paint];
+  const f = FINISHES[S.finish][1];
+  M.body.color.setHex(col);
+  M.body.metalness = f.metalness;
+  M.body.roughness = f.roughness;
+  M.body.clearcoat = f.clearcoat;
+  M.body.clearcoatRoughness = f.ccRough;
+
+  const t = TRIMS[S.trim][1];
+  if (t === null){
+    M.trim.color.setHex(col);
+    M.trim.metalness = f.metalness;
+    M.trim.roughness = f.roughness;
+    M.trim.clearcoat = f.clearcoat;
+  } else {
+    M.trim.color.setHex(t.c);
+    M.trim.metalness = t.m;
+    M.trim.roughness = t.r;
+    M.trim.clearcoat = .35;
+  }
+}
+function applyRim(){
+  const [, c, m, r] = RIMS[S.rim];
+  M.rim.color.setHex(c); M.rim.metalness = m; M.rim.roughness = r;
+}
+function applyCalliper(){
+  M.calliper.color.setHex(CALLIPERS[S.calliper][1]);
+}
+function applyLeather(){
+  const [, a, b] = LEATHERS[S.leather];
+  M.leather.color.setHex(a);
+  M.interiorPattern.color.setHex(b);
+}
+function applyTint(){
+  const t = S.tint / 100;
+  M.glass.transmission = 0.94 - t * 0.80;
+  M.glass.color.setRGB(0.05 + (1 - t) * 0.03, 0.06 + (1 - t) * 0.03, 0.07 + (1 - t) * 0.03);
+  M.glass.roughness = 0.03 + t * 0.05;
+  M.glassInner.transmission = 0.95 - t * 0.55;
+}
+function applyLight(){
+  const lv = [0, 0.35, 1][S.light];
+  M.glowFront.emissiveIntensity = lv * 3.4;
+  M.glowRear.emissiveIntensity = lv * 2.6;
+  M.lensFront.transmission = 0.93;
+  glowLampF.intensity = lv * 9;
+  glowLampR.intensity = lv * 5;
+}
+let rootBaseY = null;
+function applyRide(){
+  if (!carRoot) return;
+  if (rootBaseY === null) rootBaseY = carRoot.position.y;
+  carRoot.position.y = rootBaseY + S.ride * 0.001;   // S.ride in mm
+  contact.material.opacity = 0.9 - Math.abs(S.ride) * 0.003;
+}
+function applyXray(){
+  const x = S.xray;
+  for (const k of ['body','trim']){
+    M[k].transparent = x > 0.01;
+    M[k].opacity = 1 - x * 0.88;
+    M[k].depthWrite = x < 0.5;
+    M[k].needsUpdate = true;
+  }
+  if (parts.hood) parts.hood.visible = true;
+}
+
+/* ------------------------------------------------------ Explosionsansicht */
+const EXPLODE_DIR = {
+  hood:        [0, 1.05, 0.55],
+  tonneauPivot:[0, 0.85, -0.75],
+  doorL:       [-1.25, 0.15, 0],
+  doorR:       [1.25, 0.15, 0],
+  glass:       [0, 0.95, 0.10],
+  glassInner:  [0, 0.90, -0.25],
+  lightFront:  [0, 0.30, 1.05], lensFront:[0, 0.30, 1.15], glowFront:[0, 0.30, 1.05],
+  lightRear:   [0, 0.30, -1.05], lensRear:[0, 0.30, -1.15], glowRear:[0, 0.30, -1.05],
+  underbody:   [0, -0.85, 0],
+  interior:    [0, 0.60, -0.55],
+  interiorPattern:[0, 0.62, -0.60], leather:[0, 0.64, -0.62], seatbelt:[0, 0.64, -0.62],
+  wheelHub:    [0.35, 0.55, 0.25],
+  engine:      [0, 0.75, 0.95],
+  plate:       [0, 0.2, -0.9], plateText:[0, 0.2, -0.95], badge:[0, 0.35, 0.9],
+  steerFL:[-0.95, 0, 0.55], steerFR:[0.95, 0, 0.55],
+  steerRL:[-0.95, 0, -0.55], steerRR:[0.95, 0, -0.55],
+};
+const explodeHome = new Map();
+
+function registerExplode(obj, dir, unit){
+  explodeHome.set(obj, { base: obj.position.clone(),
+                         dir: new THREE.Vector3(...dir).multiplyScalar(unit) });
+}
+function setupExplode(){
+  /* Alle Bauteile hängen unter dem quantisierten Wurzelknoten. Eine
+     Verschiebung von 1 dort entspricht carRoot.scale.x Metern. */
+  const unit = carRoot && carRoot.scale.x ? 1 / carRoot.scale.x : 1;
+  for (const key in EXPLODE_DIR){
+    const o = groups[key] || parts[key];
+    if (o) registerExplode(o, EXPLODE_DIR[key], unit);
+  }
+  for (let g = 1; g <= 7; g++)
+    if (parts['grille'+g]) registerExplode(parts['grille'+g], [0, 0.1, 0.75], unit);
+}
+function applyExplode(){
+  const e = S.explode;
+  for (const [o, h] of explodeHome){
+    o.position.copy(h.base).addScaledVector(h.dir, e);
+  }
+}
+
+/* --------------------------------------------------------- Türen / Haube */
+function applyDoors(dt){
+  const tgt = S.doors * 0.95;
+  if (groups.doorL) groups.doorL.rotation.y += (tgt - groups.doorL.rotation.y) * Math.min(dt * 5, 1);
+  if (groups.doorR) groups.doorR.rotation.y += (-tgt - groups.doorR.rotation.y) * Math.min(dt * 5, 1);
+  const h = S.hood * 0.62;
+  if (groups.hoodPivot) groups.hoodPivot.rotation.x += (h - groups.hoodPivot.rotation.x) * Math.min(dt * 4, 1);
+}
+function applySteer(){
+  const a = S.steer * 0.52;
+  if (groups.steerFL) groups.steerFL.rotation.y = a;
+  if (groups.steerFR) groups.steerFR.rotation.y = a;
+}
+let spinAngle = 0;
+function stepWheels(dt, speed){
+  spinAngle -= speed * dt;
+  for (const p of ['FL','FR','RL','RR']){
+    const g = groups['spin' + p];
+    if (g) g.rotation.x = spinAngle;
+  }
+}
+
+function applyAll(){
+  applyPaint(); applyRim(); applyCalliper(); applyLeather();
+  applyTint(); applyLight(); applyEnv(S.env); applyRide();
+  applyXray(); applyExplode(); applySteer(); applyFogRain();
+}
+/* ============================================== V12 — prozedural gebaut
+   Das Ausgangsmodell enthält keinen Motor (nur Haubeninnenseite und
+   Verkleidung). Der F140 GA wird deshalb hier aus Geometrie aufgebaut:
+   65° Zylinderwinkel, 6 Zylinder je Bank, Ansaugtrichter im V,
+   Fächerkrümmer, rote Ventildeckel.                                        */
+
+const V12 = new THREE.Group();
+V12.visible = false;
+scene.add(V12);
+
+const BANK = THREE.MathUtils.degToRad(65) / 2;   // halber Zylinderwinkel
+const CYL = 6, PITCH = 0.108, BORE = 0.047;
+
+function crinkleTexture(label){
+  const w = 512, h = 256, cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#b0140c'; g.fillRect(0, 0, w, h);
+  const img = g.getImageData(0, 0, w, h), d = img.data;
+  for (let i = 0; i < d.length; i += 4){
+    const n = (Math.random() - .5) * 26;
+    d[i] = Math.max(0, Math.min(255, d[i] + n));
+    d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+    d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+  }
+  g.putImageData(img, 0, 0);
+  g.font = 'bold 74px Helvetica, Arial, sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = 'rgba(0,0,0,0.30)';
+  g.fillText(label, w/2 + 3, h/2 + 4);
+  g.fillStyle = '#f2e9dd';
+  g.fillText(label, w/2, h/2);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
+const matAlu   = new THREE.MeshPhysicalMaterial({ color:0x9fa4ab, metalness:.92, roughness:.42 });
+const matDark  = new THREE.MeshPhysicalMaterial({ color:0x2a2c30, metalness:.75, roughness:.55 });
+const matSteel = new THREE.MeshPhysicalMaterial({ color:0xc3c8ce, metalness:.98, roughness:.22 });
+const matRed   = new THREE.MeshPhysicalMaterial({ map:crinkleTexture('Ferrari'),
+                                                  metalness:.35, roughness:.52, clearcoat:.4 });
+const matCarb  = new THREE.MeshPhysicalMaterial({ color:0x15171b, metalness:.4, roughness:.38,
+                                                  clearcoat:.8, clearcoatRoughness:.15 });
+
+function add(geo, mat, x, y, z, rx, ry, rz){
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x || 0, y || 0, z || 0);
+  m.rotation.set(rx || 0, ry || 0, rz || 0);
+  m.castShadow = m.receiveShadow = true;
+  V12.add(m);
+  return m;
+}
+
+/* ----------------------------------------------------- Kurbelgehäuse */
+add(new THREE.BoxGeometry(0.30, 0.20, 0.76), matAlu, 0, 0, 0);
+add(new THREE.BoxGeometry(0.34, 0.06, 0.80), matAlu, 0, -0.10, 0);
+/* Ölwanne */
+{
+  const pts = [];
+  for (let i = 0; i <= 8; i++){
+    const t = i / 8;
+    pts.push(new THREE.Vector2(0.17 - 0.06 * t * t, -0.13 - t * 0.14));
+  }
+  const pan = new THREE.LatheGeometry(pts, 24);
+  pan.scale(1, 1, 2.35);
+  add(pan, matDark, 0, 0, 0);
+}
+/* Schwungradglocke hinten */
+add(new THREE.CylinderGeometry(0.19, 0.19, 0.08, 32), matAlu, 0, -0.01, -0.44, Math.PI/2, 0, 0);
+add(new THREE.TorusGeometry(0.175, 0.016, 12, 36), matSteel, 0, -0.01, -0.49, 0, 0, 0);
+/* Riemenscheiben vorn */
+add(new THREE.CylinderGeometry(0.085, 0.085, 0.030, 28), matSteel, 0, -0.03, 0.42, Math.PI/2, 0, 0);
+add(new THREE.CylinderGeometry(0.055, 0.055, 0.026, 24), matSteel, 0.10, 0.06, 0.42, Math.PI/2, 0, 0);
+add(new THREE.CylinderGeometry(0.048, 0.048, 0.026, 24), matSteel, -0.11, 0.07, 0.42, Math.PI/2, 0, 0);
+
+/* ------------------------------------------------------- Zylinderbänke */
+const trumpetPts = [];
+for (let i = 0; i <= 10; i++){
+  const t = i / 10;
+  trumpetPts.push(new THREE.Vector2(0.021 + Math.pow(t, 2.6) * 0.030, t * 0.085));
+}
+const trumpetGeo = new THREE.LatheGeometry(trumpetPts, 20);
+const cylGeo = new THREE.CylinderGeometry(BORE, BORE + 0.004, 0.17, 20, 1, true);
+const headGeo = new THREE.BoxGeometry(0.155, 0.075, PITCH * CYL + 0.045);
+const coverGeo = new THREE.BoxGeometry(0.125, 0.062, PITCH * CYL + 0.020);
+const exhaustHdr = [];
+
+for (const side of [-1, 1]){
+  const bank = new THREE.Group();
+  bank.rotation.z = side * BANK;
+  V12.add(bank);
+
+  for (let i = 0; i < CYL; i++){
+    const z = (i - (CYL - 1) / 2) * PITCH;
+    const c = new THREE.Mesh(cylGeo, matAlu);
+    c.position.set(0, 0.145, z);
+    c.castShadow = true;
+    bank.add(c);
+    /* Ansaugtrichter zeigen ins V */
+    const tr = new THREE.Mesh(trumpetGeo, matCarb);
+    tr.position.set(-side * 0.015, 0.262, z);
+    tr.rotation.z = side * 0.20;
+    tr.castShadow = true;
+    bank.add(tr);
+  }
+  const head = new THREE.Mesh(headGeo, matAlu);
+  head.position.set(0, 0.215, 0);
+  head.castShadow = true;
+  bank.add(head);
+
+  const cover = new THREE.Mesh(coverGeo, matRed);
+  cover.position.set(0, 0.272, 0);
+  cover.castShadow = true;
+  bank.add(cover);
+
+  /* Zündspulen-Reihe auf dem Deckel */
+  for (let i = 0; i < CYL; i++){
+    const z = (i - (CYL - 1) / 2) * PITCH;
+    const co = new THREE.Mesh(new THREE.BoxGeometry(0.030, 0.052, 0.036), matDark);
+    co.position.set(0.030, 0.318, z);
+    bank.add(co);
+  }
+  exhaustHdr.push({ side, bank });
+}
+
+/* ------------------------------------------ Ansaugbrücke zwischen den Bänken */
+{
+  const plenum = new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.075, PITCH * CYL - 0.02), matCarb);
+  plenum.position.set(0, 0.345, 0);
+  plenum.castShadow = true;
+  V12.add(plenum);
+  add(new THREE.CylinderGeometry(0.048, 0.048, 0.14, 24), matCarb, 0, 0.345, 0.38, Math.PI/2, 0, 0);
+  add(new THREE.TorusGeometry(0.030, 0.012, 10, 24, Math.PI), matDark, 0, 0.345, 0.45, 0, 0, 0);
+}
+
+/* --------------------------------------------------------- Fächerkrümmer */
+for (const { side } of exhaustHdr){
+  for (let i = 0; i < CYL; i++){
+    const z = (i - (CYL - 1) / 2) * PITCH;
+    const sx = Math.sin(BANK) * side, sy = Math.cos(BANK);
+    const start = new THREE.Vector3(sx * 0.155 + side * 0.02, sy * 0.155 + 0.02, z);
+    const mid1  = new THREE.Vector3(side * 0.30, 0.10, z * 0.82);
+    const mid2  = new THREE.Vector3(side * 0.31, -0.03, z * 0.45 - 0.16);
+    const end   = new THREE.Vector3(side * 0.20, -0.09, -0.42);
+    const curve = new THREE.CatmullRomCurve3([start, mid1, mid2, end], false, 'catmullrom', 0.45);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 26, 0.0185, 10, false), matSteel);
+    tube.castShadow = true;
+    V12.add(tube);
+  }
+  /* Sammler */
+  add(new THREE.CylinderGeometry(0.048, 0.030, 0.13, 20), matSteel,
+      side * 0.20, -0.10, -0.48, Math.PI/2.15, 0, side * 0.12);
+}
+
+/* ---------------------------------------------------------------- Sockel */
+const v12Glow = new THREE.PointLight(0xff5a20, 0, 3.0, 2);
+v12Glow.position.set(0, -0.15, -0.35);
+V12.add(v12Glow);
+
+V12.scale.setScalar(1.0);
+
+/* Motoransicht: Wagen ausblenden, Motor schweben lassen */
+let v12Spin = 0;
+function setEngineMode(on){
+  V12.visible = on;
+  if (carRoot) carRoot.visible = !on;
+  contact.visible = !on;
+  if (on){
+    V12.position.set(0, 1.05, 0);
+    v12Spin = 0;
+  }
+}
+function stepV12(dt, t){
+  if (!V12.visible) return;
+  v12Spin += dt * 0.28;
+  V12.rotation.y = v12Spin;
+  V12.position.y = 1.05 + Math.sin(t * 0.9) * 0.035;
+  V12.rotation.z = Math.sin(t * 0.55) * 0.035;
+  v12Glow.intensity = 0.7 + Math.sin(t * 7) * 0.25 + S.rpm * 5;
+}
+/* ======================================================= V12-Klang (Web Audio)
+   Zündfrequenz eines Zwölfzylinder-Viertakters: sechs Zündungen je
+   Kurbelwellenumdrehung, also f = U/min / 60 * 6.
+   Leerlauf 1000/min -> 100 Hz, Begrenzer 8900/min -> 890 Hz.            */
+
+const AUDIO = {
+  ctx:null, ready:false, running:false,
+  rpm:1000, targetRpm:1000, throttle:0, master:null,
+  oscs:[], gains:[], noiseGain:null, noiseFilt:null, bodyFilt:null,
+  vol:0.6, limiterBlink:0,
+};
+const IDLE_RPM = 1000, MAX_RPM = 8900;
+
+function noiseBuffer(ctx, sec){
+  const n = Math.floor(ctx.sampleRate * sec);
+  const b = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = b.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < n; i++){
+    const w = Math.random() * 2 - 1;
+    last = (last + 0.02 * w) / 1.02;       // leicht rosa gefärbt
+    d[i] = last * 3.2;
+  }
+  return b;
+}
+
+/* kurzer künstlicher Nachhall statt externer Impulsantwort */
+function reverbBuffer(ctx, sec, decay){
+  const n = Math.floor(ctx.sampleRate * sec);
+  const b = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let c = 0; c < 2; c++){
+    const d = b.getChannelData(c);
+    for (let i = 0; i < n; i++){
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay);
+    }
+  }
+  return b;
+}
+
+/* Oberton-Gewichte: ein V12 ist obertonreich, aber ohne die harten
+   ungeraden Anteile eines V8-Kreuzkurbelmotors. */
+const HARM = [
+  [0.5,  0.16], [1,  1.00], [2,  0.62], [3,  0.40], [4,  0.26],
+  [5,  0.17], [6,  0.20], [8,  0.11], [10, 0.07], [12, 0.05],
+];
+
+function audioInit(){
+  if (AUDIO.ctx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const ctx = new AC();
+  AUDIO.ctx = ctx;
+
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  AUDIO.master = master;
+
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.knee.value = 24;
+  comp.ratio.value = 7; comp.attack.value = 0.004; comp.release.value = 0.18;
+
+  const conv = ctx.createConvolver();
+  conv.buffer = reverbBuffer(ctx, 1.1, 2.6);
+  const wet = ctx.createGain(); wet.gain.value = 0.16;
+  const dry = ctx.createGain(); dry.gain.value = 0.92;
+
+  master.connect(dry); dry.connect(comp);
+  master.connect(conv); conv.connect(wet); wet.connect(comp);
+  comp.connect(ctx.destination);
+
+  /* Auspuffkörper: Resonanz im Mittenbereich */
+  const body = ctx.createBiquadFilter();
+  body.type = 'peaking'; body.frequency.value = 240; body.Q.value = 1.1; body.gain.value = 7;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 55;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 4200; lp.Q.value = 0.7;
+  body.connect(hp); hp.connect(lp); lp.connect(master);
+  AUDIO.bodyFilt = { body, lp };
+
+  for (const [mult, amp] of HARM){
+    const o = ctx.createOscillator();
+    o.type = mult <= 1 ? 'sawtooth' : (mult % 2 ? 'square' : 'sawtooth');
+    o.frequency.value = 100 * mult;
+    const g = ctx.createGain();
+    g.gain.value = amp * 0.10;
+    o.connect(g); g.connect(body);
+    o.start();
+    AUDIO.oscs.push({ o, mult });
+    AUDIO.gains.push({ g, amp });
+  }
+
+  /* Ansaug- und Abgasrauschen */
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx, 3);
+  src.loop = true;
+  const nf = ctx.createBiquadFilter();
+  nf.type = 'bandpass'; nf.frequency.value = 800; nf.Q.value = 0.85;
+  const ng = ctx.createGain(); ng.gain.value = 0;
+  src.connect(nf); nf.connect(ng); ng.connect(master);
+  src.start();
+  AUDIO.noiseGain = ng; AUDIO.noiseFilt = nf;
+
+  AUDIO.ready = true;
+}
+
+async function audioStart(){
+  audioInit();
+  if (!AUDIO.ctx) { toast('Kein Audio möglich'); return; }
+  if (AUDIO.ctx.state === 'suspended') await AUDIO.ctx.resume();
+  AUDIO.running = true;
+  AUDIO.rpm = 260;                     // Anlasser
+  AUDIO.targetRpm = IDLE_RPM;
+  const t = AUDIO.ctx.currentTime;
+  AUDIO.master.gain.cancelScheduledValues(t);
+  AUDIO.master.gain.setValueAtTime(0.0001, t);
+  AUDIO.master.gain.exponentialRampToValueAtTime(Math.max(AUDIO.vol, 0.02), t + 0.5);
+  /* kurzer Hochlauf nach dem Start, wie beim Anlassen */
+  AUDIO.targetRpm = 2600;
+  setTimeout(() => { if (AUDIO.running) AUDIO.targetRpm = IDLE_RPM; }, 900);
+}
+
+function audioStop(){
+  AUDIO.running = false;
+  if (!AUDIO.ctx) return;
+  const t = AUDIO.ctx.currentTime;
+  AUDIO.master.gain.cancelScheduledValues(t);
+  AUDIO.master.gain.setValueAtTime(AUDIO.master.gain.value, t);
+  AUDIO.master.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+}
+
+function audioThrottle(v){ AUDIO.throttle = v; }
+
+function audioStep(dt){
+  if (!AUDIO.ready || !AUDIO.running) return;
+  /* Drehzahlverlauf: unter Last zieht er hoch, ohne Gas fällt er ab */
+  const want = IDLE_RPM + AUDIO.throttle * (MAX_RPM - IDLE_RPM);
+  const rate = AUDIO.throttle > 0.02 ? 2.1 : 3.2;
+  const load = 1 - (AUDIO.rpm / MAX_RPM) * 0.55;   // oben herum träger
+  AUDIO.rpm += (want - AUDIO.rpm) * Math.min(dt * rate * load, 1);
+  if (AUDIO.rpm > MAX_RPM - 60){
+    AUDIO.rpm = MAX_RPM - 60 - Math.random() * 120;   // Begrenzer
+    AUDIO.limiterBlink = 1;
+  }
+  AUDIO.limiterBlink = Math.max(0, AUDIO.limiterBlink - dt * 3);
+  S.rpm = AUDIO.rpm / MAX_RPM;
+
+  const f = AUDIO.rpm / 60 * 6;
+  const ct = AUDIO.ctx.currentTime;
+  const rough = 1 + (Math.random() - .5) * (AUDIO.rpm < 1400 ? 0.016 : 0.004);
+  for (let i = 0; i < AUDIO.oscs.length; i++){
+    const { o, mult } = AUDIO.oscs[i];
+    o.frequency.setTargetAtTime(Math.min(f * mult * rough, 18000), ct, 0.02);
+    /* mit steigender Drehzahl treten die hohen Ordnungen hervor */
+    const lift = mult >= 4 ? (0.35 + S.rpm * 1.35) : (1.0 - S.rpm * 0.18);
+    const th = 0.45 + AUDIO.throttle * 0.75;
+    AUDIO.gains[i].g.gain.setTargetAtTime(
+      AUDIO.gains[i].amp * 0.085 * lift * th, ct, 0.05);
+  }
+  AUDIO.noiseFilt.frequency.setTargetAtTime(420 + S.rpm * 2600, ct, 0.06);
+  AUDIO.noiseGain.gain.setTargetAtTime(0.020 + AUDIO.throttle * 0.075 + S.rpm * 0.035, ct, 0.06);
+  AUDIO.bodyFilt.lp.frequency.setTargetAtTime(2200 + S.rpm * 6500, ct, 0.08);
+  AUDIO.bodyFilt.body.frequency.setTargetAtTime(180 + S.rpm * 420, ct, 0.08);
+  AUDIO.master.gain.setTargetAtTime(AUDIO.vol, ct, 0.2);
+}
+/* ================================================================ Kamera */
+let anim = null;
+const _v = new THREE.Vector3();
+const AXIS_Y = new THREE.Vector3(0, 1, 0);
+
+function frameDistance(radius){
+  const vFov = THREE.MathUtils.degToRad(camera.fov);
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+  return radius / Math.sin(Math.min(vFov, hFov) / 2);
+}
+
+function viewPose(i){
+  const v = VIEWS[i][1];
+  if (v.fixed){
+    return { pos:new THREE.Vector3(...v.fixed), tgt:new THREE.Vector3(...v.look), fov:v.fov };
+  }
+  if (v.engine){
+    const d = frameDistance(0.55) * v.r;
+    return { pos:new THREE.Vector3(Math.sin(v.az) * Math.cos(v.el),
+                                   Math.sin(v.el), Math.cos(v.az) * Math.cos(v.el))
+                    .multiplyScalar(d).add(new THREE.Vector3(0, 1.05, 0)),
+             tgt:new THREE.Vector3(0, 1.05, 0), fov:32 };
+  }
+  const d = frameDistance(2.55) * v.r;
+  const t = new THREE.Vector3(...v.t);
+  const p = new THREE.Vector3(
+    Math.sin(v.az) * Math.cos(v.el), Math.sin(v.el), Math.cos(v.az) * Math.cos(v.el)
+  ).multiplyScalar(v.r < .6 ? d * 0.42 : d).add(t);
+  return { pos:p, tgt:t, fov:32 };
+}
+
+function goView(i, instant){
+  S.view = i;
+  const eng = !!VIEWS[i][1].engine;
+  setEngineMode(eng);
+  const p = viewPose(i);
+  if (instant){
+    camera.position.copy(p.pos); controls.target.copy(p.tgt);
+    camera.fov = p.fov; camera.updateProjectionMatrix();
+    controls.update(); anim = null;
+  } else {
+    anim = { t:0, dur:1.15,
+             p0:camera.position.clone(), p1:p.pos,
+             t0:controls.target.clone(), t1:p.tgt,
+             f0:camera.fov, f1:p.fov };
+  }
+  syncViewButtons();
+}
+
+function stepAnim(dt){
+  if (!anim) return;
+  anim.t = Math.min(anim.t + dt / anim.dur, 1);
+  const e = anim.t < .5 ? 4*anim.t*anim.t*anim.t
+                        : 1 - Math.pow(-2*anim.t + 2, 3) / 2;
+  camera.position.lerpVectors(anim.p0, anim.p1, e);
+  controls.target.lerpVectors(anim.t0, anim.t1, e);
+  const f = anim.f0 + (anim.f1 - anim.f0) * e;
+  if (Math.abs(camera.fov - f) > 1e-3){ camera.fov = f; camera.updateProjectionMatrix(); }
+  if (anim.t >= 1) anim = null;
+}
+
+/* ---------------------------------------------------------- geführte Tour */
+const TOUR = [0, 1, 2, 6, 7, 3, 4, 8, 9, 10, 5, 0];
+let tour = null;
+function tourToggle(){
+  if (tour){ tour = null; toast('Tour beendet'); }
+  else { tour = { i:0, wait:0 }; goView(TOUR[0]); toast('Geführte Tour läuft'); }
+  syncButtons();
+}
+function stepTour(dt){
+  if (!tour) return;
+  tour.wait -= dt;
+  if (!anim && tour.wait <= 0){
+    tour.i++;
+    if (tour.i >= TOUR.length){ tour = null; syncButtons(); toast('Tour beendet'); return; }
+    goView(TOUR[tour.i]);
+    tour.wait = 2.4;
+  }
+}
+
+/* --------------------------------------------------------- Vergleichsmodus */
+let compareB = null;      // gespeicherte Zweitkonfiguration
+let compareOn = false;
+
+function snapConfig(){
+  const o = {};
+  for (const k of SKEYS) o[k] = S[k];
+  return o;
+}
+function pushConfig(c, full){
+  for (const k of SKEYS) if (c[k] !== undefined) S[k] = c[k];
+  applyPaint(); applyRim(); applyCalliper(); applyLeather(); applyTint(); applyLight();
+  if (full){ applyEnv(S.env); applyRide(); applyXray(); applyFogRain(); }
+}
+function compareToggle(){
+  if (compareOn){ compareOn = false; toast('Vergleich aus'); }
+  else {
+    if (!compareB) compareB = snapConfig();
+    compareOn = true;
+    toast('Vergleich: links aktuell, rechts gespeichert');
+  }
+  syncButtons();
+}
+function compareStore(){
+  compareB = snapConfig();
+  toast('Als Vergleichsstand gemerkt');
+}
+
+/* ----------------------------------------------------------- Hotspots */
+const hotEls = [];
+function buildHotspots(){
+  const layer = document.getElementById('hotlayer');
+  HOTSPOTS.forEach((h, i) => {
+    const d = document.createElement('button');
+    d.className = 'hot';
+    d.innerHTML = '<span class="dot"></span>';
+    d.addEventListener('click', ev => {
+      ev.stopPropagation();
+      showTip(h[1], h[2]);
+    });
+    layer.appendChild(d);
+    hotEls.push({ el:d, pos:new THREE.Vector3(...h[0]) });
+  });
+}
+function stepHotspots(){
+  const layer = document.getElementById('hotlayer');
+  const on = S.hotspots && !V12.visible;
+  layer.style.display = on ? 'block' : 'none';
+  if (!on) return;
+  for (const h of hotEls){
+    _v.copy(h.pos);
+    if (carRoot){
+      _v.applyAxisAngle(AXIS_Y, carRoot.rotation.y);
+      _v.y += carRoot.position.y - (rootBaseY === null ? 0 : rootBaseY);
+    }
+    _v.project(camera);
+    const vis = _v.z < 1;
+    h.el.style.display = vis ? 'block' : 'none';
+    if (!vis) continue;
+    h.el.style.left = ((_v.x * .5 + .5) * innerWidth) + 'px';
+    h.el.style.top  = ((-_v.y * .5 + .5) * innerHeight) + 'px';
+  }
+}
+
+/* ------------------------------------------------------------ Fotoexport */
+const RATIOS = [['Bildschirm', 0], ['16:9', 16/9], ['3:2', 3/2], ['1:1', 1], ['9:16', 9/16]];
+
+function shoot(){
+  const r = RATIOS[S.ratio] ? RATIOS[S.ratio][1] : 0;
+  const base = Math.min(Math.max(innerWidth, innerHeight) * 2, 3200);
+  let w, h;
+  if (!r){ w = innerWidth * 2; h = innerHeight * 2; }
+  else if (r >= 1){ w = base; h = Math.round(base / r); }
+  else { h = base; w = Math.round(base * r); }
+  w = Math.min(w, 3200); h = Math.min(h, 3200);
+
+  const oldA = camera.aspect, oldPR = renderer.getPixelRatio();
+  const size = new THREE.Vector2(); renderer.getSize(size);
+  renderer.setPixelRatio(1);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  if (S.dof && composer){ composer.setSize(w, h); composer.render(); }
+  else renderer.render(scene, camera);
+
+  const src = renderer.domElement;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  g.drawImage(src, 0, 0, w, h);
+  if (S.mark){
+    const pad = Math.round(h * 0.035);
+    const fs = Math.max(14, Math.round(h * 0.024));
+    g.font = '600 ' + fs + 'px Helvetica, Arial, sans-serif';
+    g.textBaseline = 'bottom';
+    g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = fs * 0.6;
+    g.fillStyle = 'rgba(255,255,255,.92)';
+    g.fillText('812 GTS', pad, h - pad - fs * 1.25);
+    g.font = '400 ' + Math.round(fs * 0.62) + 'px Helvetica, Arial, sans-serif';
+    g.fillStyle = 'rgba(255,255,255,.62)';
+    g.fillText(PAINTS[S.paint][0] + ' · ' + FINISHES[S.finish][0], pad, h - pad);
+  }
+
+  renderer.setPixelRatio(oldPR);
+  renderer.setSize(size.x, size.y, false);
+  if (composer) composer.setSize(size.x, size.y);
+  camera.aspect = oldA; camera.updateProjectionMatrix();
+
+  cv.toBlob(b => {
+    if (!b){ toast('Foto fehlgeschlagen'); return; }
+    const url = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '812GTS_' + PAINTS[S.paint][0].replace(/\s+/g,'') + '_' + Date.now() + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+    toast('Foto gesichert (' + w + '×' + h + ')');
+  }, 'image/png');
+}
+/* ==================================================================== UI */
+const el = (tag, cls, html) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+};
+const hex = v => '#' + v.toString(16).padStart(6, '0');
+
+function swatchGrid(list, key, onPick, styleFn){
+  const g = el('div', 'grid');
+  list.forEach((it, i) => {
+    const b = el('button', 'sw' + (S[key] === i ? ' on' : ''));
+    b.title = it[0];
+    b.style.background = styleFn ? styleFn(it, i) : hex(it[1]);
+    b.addEventListener('click', () => {
+      S[key] = i;
+      [...g.children].forEach((c, j) => c.classList.toggle('on', j === i));
+      onPick && onPick();
+      pushURL();
+    });
+    g.appendChild(b);
+  });
+  return g;
+}
+
+function chipRow(list, key, onPick){
+  const r = el('div', 'chips');
+  list.forEach((it, i) => {
+    const b = el('button', 'chip' + (S[key] === i ? ' on' : ''),
+                 Array.isArray(it) ? it[0] : it);
+    b.addEventListener('click', () => {
+      S[key] = i;
+      [...r.children].forEach((c, j) => c.classList.toggle('on', j === i));
+      onPick && onPick();
+      pushURL();
+    });
+    r.appendChild(b);
+  });
+  return r;
+}
+
+function label(t){ return el('div', 'lbl', t); }
+
+function slider(text, key, min, max, step, onInput, fmt){
+  const wrap = el('div', 'slw');
+  const head = el('div', 'slh');
+  const name = el('span', null, text);
+  const val = el('span', 'slv', fmt ? fmt(S[key]) : String(S[key]));
+  head.append(name, val);
+  const inp = el('input', 'sl');
+  inp.type = 'range'; inp.min = min; inp.max = max; inp.step = step;
+  inp.value = S[key];
+  inp.addEventListener('input', () => {
+    S[key] = +inp.value;
+    val.textContent = fmt ? fmt(S[key]) : String(S[key]);
+    onInput && onInput();
+  });
+  inp.addEventListener('change', pushURL);
+  wrap.append(head, inp);
+  wrap._set = v => { inp.value = v; val.textContent = fmt ? fmt(v) : String(v); };
+  return wrap;
+}
+
+function toggle(text, key, onChange){
+  const b = el('button', 'tg' + (S[key] ? ' on' : ''), text);
+  b.addEventListener('click', () => {
+    S[key] = S[key] ? 0 : 1;
+    b.classList.toggle('on', !!S[key]);
+    onChange && onChange();
+    pushURL();
+  });
+  return b;
+}
+
+function actionRow(items){
+  const r = el('div', 'chips');
+  items.forEach(([t, fn, id]) => {
+    const b = el('button', 'chip', t);
+    if (id) b.id = id;
+    b.addEventListener('click', fn);
+    r.appendChild(b);
+  });
+  return r;
+}
+
+const TABS = ['Lack', 'Räder', 'Interieur', 'Szene', 'Ansicht', 'Motor', 'Daten'];
+const tabsEl  = document.getElementById('tabs');
+const pagesEl = document.getElementById('pages');
+const uiRef = {};
+
+function buildUI(){
+  tabsEl.innerHTML = ''; pagesEl.innerHTML = '';
+  TABS.forEach((t, i) => {
+    const b = el('button', 'tab' + (i === 0 ? ' on' : ''), t);
+    b.addEventListener('click', () => {
+      [...tabsEl.children].forEach((c, j) => c.classList.toggle('on', j === i));
+      [...pagesEl.children].forEach((c, j) => c.classList.toggle('on', j === i));
+      pagesEl.scrollTop = 0;
+    });
+    tabsEl.appendChild(b);
+  });
+  const page = () => { const p = el('div', 'page'); pagesEl.appendChild(p); return p; };
+
+  /* ------------------------------------------------------------- Lack */
+  {
+    const p = page(); p.classList.add('on');
+    p.append(label('Außenfarbe'));
+    p.append(swatchGrid(PAINTS, 'paint', applyPaint));
+    p.append(el('div', 'note', PAINTS[S.paint][0]));
+    uiRef.paintName = p.lastChild;
+    p.append(label('Oberfläche'));
+    p.append(chipRow(FINISHES, 'finish', applyPaint));
+    p.append(label('Aerodynamik-Teile'));
+    p.append(chipRow(TRIMS, 'trim', applyPaint));
+  }
+
+  /* ------------------------------------------------------------ Räder */
+  {
+    const p = page();
+    p.append(label('Felge'));
+    p.append(chipRow(RIMS, 'rim', applyRim));
+    p.append(label('Bremssattel'));
+    p.append(swatchGrid(CALLIPERS, 'calliper', applyCalliper));
+    p.append(label('Fahrwerk'));
+    uiRef.ride = slider('Höhe', 'ride', -40, 60, 1, applyRide, v => (v > 0 ? '+' : '') + v + ' mm');
+    p.append(uiRef.ride);
+    uiRef.steer = slider('Lenkeinschlag', 'steer', -1, 1, .02, applySteer,
+                         v => Math.round(v * 30) + '°');
+    p.append(uiRef.steer);
+    p.append(el('div', 'note', 'Beim Drehteller rollen die Räder mit.'));
+  }
+
+  /* -------------------------------------------------------- Interieur */
+  {
+    const p = page();
+    p.append(label('Leder'));
+    p.append(swatchGrid(LEATHERS, 'leather', applyLeather));
+    p.append(label('Scheibentönung'));
+    uiRef.tint = slider('Tönung', 'tint', 0, 100, 1, applyTint, v => v + ' %');
+    p.append(uiRef.tint);
+    p.append(label('Karosserie öffnen'));
+    const row = el('div', 'chips');
+    const bd = el('button', 'chip', 'Türen');
+    bd.addEventListener('click', () => { S.doors = S.doors ? 0 : 1; bd.classList.toggle('on', !!S.doors); });
+    const br = el('button', 'chip' + (S.roof ? '' : ' on'), 'Dach');
+    br.addEventListener('click', () => {
+      setRoof(!S.roof); br.classList.toggle('on', !S.roof);
+      toast(S.roof ? 'Verdeck öffnet' : 'Verdeck schließt');
+    });
+    uiRef.roofBtn = br;
+    const bh = el('button', 'chip', 'Haube');
+    bh.addEventListener('click', () => { S.hood = S.hood ? 0 : 1; bh.classList.toggle('on', !!S.hood); });
+    row.append(br, bd, bh);
+    p.append(row);
+    uiRef.doorBtn = bd; uiRef.hoodBtn = bh;
+    p.append(el('div', 'note', 'Verdeck, Türen und Haube lassen sich auch direkt am Wagen antippen. Das Dach braucht gut vier Sekunden, wie beim echten Wagen.'));
+  }
+
+  /* ------------------------------------------------------------ Szene */
+  {
+    const p = page();
+    p.append(label('Umgebung'));
+    p.append(chipRow(ENVS, 'env', () => applyEnv(S.env)));
+    p.append(label('Sonnenstand'));
+    uiRef.sun = slider('Höhe', 'sun', 0, 1, .01, applySun,
+                       v => v < .18 ? 'Morgen' : v < .42 ? 'Vormittag'
+                          : v < .58 ? 'Mittag' : v < .8 ? 'Nachmittag' : 'Abend');
+    p.append(uiRef.sun);
+    p.append(label('Fahrzeuglicht'));
+    p.append(chipRow(LIGHTMODES, 'light', applyLight));
+    p.append(label('Studiolicht'));
+    uiRef.lamp = slider('Stärke', 'lamp', 0, 1, .01, applyFogRain, v => Math.round(v * 100) + ' %');
+    p.append(uiRef.lamp);
+    uiRef.lampAz = slider('Richtung', 'lampAz', 0, 6.28, .02, () => {}, v => Math.round(v * 57) + '°');
+    p.append(uiRef.lampAz);
+    p.append(label('Wetter'));
+    uiRef.rain = slider('Regen', 'rain', 0, 1, .01, applyFogRain, v => Math.round(v * 100) + ' %');
+    p.append(uiRef.rain);
+    uiRef.fog = slider('Nebel', 'fog', 0, 1, .01, applyFogRain, v => Math.round(v * 100) + ' %');
+    p.append(uiRef.fog);
+    p.append(label('Boden'));
+    uiRef.reflect = slider('Spiegelung', 'reflect', 0, 1, .01, applyFogRain,
+                           v => Math.round(v * 100) + ' %');
+    p.append(uiRef.reflect);
+  }
+
+  /* ---------------------------------------------------------- Ansicht */
+  {
+    const p = page();
+    p.append(label('Zerlegen'));
+    uiRef.explode = slider('Explosionsansicht', 'explode', 0, 1, .01, applyExplode,
+                           v => Math.round(v * 100) + ' %');
+    p.append(uiRef.explode);
+    p.append(label('Durchsicht'));
+    uiRef.xray = slider('Röntgen', 'xray', 0, 1, .01, applyXray, v => Math.round(v * 100) + ' %');
+    p.append(uiRef.xray);
+    p.append(label('Tiefenschärfe'));
+    p.append(toggle('Unschärfe an', 'dof', applyDof));
+    uiRef.aperture = slider('Blende', 'aperture', 0, 1, .01, applyDof,
+                            v => 'f/' + (1.4 + (1 - v) * 14).toFixed(1));
+    p.append(uiRef.aperture);
+    p.append(label('Einblendungen'));
+    const r2 = el('div', 'chips');
+    r2.append(toggle('Hotspots', 'hotspots'));
+    const bt = el('button', 'chip', 'Geführte Tour'); bt.id = 'bTour';
+    bt.addEventListener('click', tourToggle);
+    const bc = el('button', 'chip', 'Vergleich'); bc.id = 'bCmp';
+    bc.addEventListener('click', compareToggle);
+    r2.append(bt, bc);
+    p.append(r2);
+    p.append(actionRow([['Aktuellen Stand merken', compareStore]]));
+    p.append(label('Foto'));
+    p.append(chipRow(RATIOS, 'ratio', null));
+    p.append(toggle('Beschriftung im Bild', 'mark'));
+    p.append(actionRow([['Foto aufnehmen', shoot]]));
+  }
+
+  /* ------------------------------------------------------------ Motor */
+  {
+    const p = page();
+    p.append(el('div', 'note', 'Der V12 ist im Ausgangsmodell nicht enthalten und '
+      + 'wurde hier nachgebaut: 6,5 l, 65° Zylinderwinkel, Ansaugtrichter im V, '
+      + 'Fächerkrümmer. Die Ansicht „Motor“ stellt ihn frei.'));
+    p.append(actionRow([['Motor freistellen', () => goView(10)]]));
+    p.append(label('Klang'));
+    const sr = el('div', 'chips');
+    const bs = el('button', 'chip', 'Motor starten'); bs.id = 'bSound';
+    bs.addEventListener('click', () => {
+      if (AUDIO.running){ audioStop(); bs.textContent = 'Motor starten'; bs.classList.remove('on'); }
+      else { audioStart(); bs.textContent = 'Motor aus'; bs.classList.add('on'); }
+    });
+    sr.append(bs);
+    p.append(sr);
+    uiRef.vol = slider('Lautstärke', 'vol', 0, 1, .01, () => { AUDIO.vol = S.vol; },
+                       v => Math.round(v * 100) + ' %');
+    p.append(uiRef.vol);
+    p.append(label('Gas'));
+    const gp = el('button', 'gas', 'Gedrückt halten');
+    const dn = e => { e.preventDefault(); gp.classList.add('on'); audioThrottle(1);
+                      if (!AUDIO.running) { audioStart(); document.getElementById('bSound').textContent='Motor aus'; document.getElementById('bSound').classList.add('on'); } };
+    const up = e => { e.preventDefault(); gp.classList.remove('on'); audioThrottle(0); };
+    gp.addEventListener('pointerdown', dn);
+    gp.addEventListener('pointerup', up);
+    gp.addEventListener('pointercancel', up);
+    gp.addEventListener('pointerleave', up);
+    p.append(gp);
+    const tach = el('div', 'tach', '<div class="tbar"><i></i></div><div class="tnum">0 /min</div>');
+    p.append(tach);
+    uiRef.tachBar = tach.querySelector('i');
+    uiRef.tachNum = tach.querySelector('.tnum');
+  }
+
+  /* ------------------------------------------------------------ Daten */
+  {
+    const p = page();
+    p.append(label('Konfiguration'));
+    p.append(actionRow([
+      ['Speichern', saveConfig],
+      ['Zufall', randomConfig],
+      ['Zurücksetzen', resetConfig],
+      ['Link teilen', shareLink],
+    ]));
+    const sl = el('div', 'saved'); sl.id = 'savedList';
+    p.append(sl);
+    p.append(label('Technische Daten'));
+    const t = el('table', 'spec');
+    SPECS.forEach(([k, v]) => {
+      const tr = el('tr'); tr.append(el('td', null, k), el('td', 'v', v)); t.append(tr);
+    });
+    p.append(t);
+    p.append(label('812 GTS gegen 812 Superfast'));
+    const c = el('table', 'spec cmp');
+    COMPARE.forEach((row, i) => {
+      const tr = el('tr', i === 0 ? 'hd' : null);
+      row.forEach(cell => tr.append(el(i === 0 ? 'th' : 'td', null, cell)));
+      c.append(tr);
+    });
+    p.append(c);
+    p.append(el('div', 'note', 'Modell: „2020 Ferrari 812 GTS“ von Ddiaz Design (Sketchfab, CC-BY 4.0), '
+      + 'für diese App neu aufgebaut, zerlegt und mit eigenen Materialien versehen. '
+      + 'Nicht mit Ferrari S.p.A. verbunden.'));
+    renderSaved();
+  }
+}
+
+/* ------------------------------------------------- gespeicherte Konfigs */
+const LSKEY = 'zenith812_v31';
+function loadSaved(){
+  try { return JSON.parse(localStorage.getItem(LSKEY) || '[]'); } catch (e) { return []; }
+}
+function storeSaved(a){
+  try { localStorage.setItem(LSKEY, JSON.stringify(a.slice(0, 12))); } catch (e) {}
+}
+function saveConfig(){
+  const name = prompt('Name der Konfiguration:', PAINTS[S.paint][0]);
+  if (!name) return;
+  const a = loadSaved();
+  a.unshift({ name, cfg:snapConfig(), t:Date.now() });
+  storeSaved(a); renderSaved(); toast('Gespeichert: ' + name);
+}
+function renderSaved(){
+  const box = document.getElementById('savedList');
+  if (!box) return;
+  const a = loadSaved();
+  box.innerHTML = '';
+  if (!a.length){ box.append(el('div', 'note', 'Noch nichts gespeichert.')); return; }
+  a.forEach((it, i) => {
+    const row = el('div', 'srow');
+    const b = el('button', 'chip', it.name);
+    b.addEventListener('click', () => {
+      pushConfig(it.cfg, true); syncUI(); pushURL(); toast('Geladen: ' + it.name);
+    });
+    const d = el('button', 'del', '×');
+    d.addEventListener('click', () => {
+      const arr = loadSaved(); arr.splice(i, 1); storeSaved(arr); renderSaved();
+    });
+    row.append(b, d); box.append(row);
+  });
+}
+function randomConfig(){
+  const ri = n => Math.floor(Math.random() * n);
+  S.paint = ri(PAINTS.length); S.finish = ri(FINISHES.length);
+  S.rim = ri(RIMS.length); S.calliper = ri(CALLIPERS.length);
+  S.leather = ri(LEATHERS.length); S.trim = ri(TRIMS.length);
+  S.tint = 10 + ri(80);
+  applyPaint(); applyRim(); applyCalliper(); applyLeather(); applyTint();
+  syncUI(); pushURL(); toast(PAINTS[S.paint][0] + ' · ' + FINISHES[S.finish][0]);
+}
+function resetConfig(){
+  for (const k of SKEYS) S[k] = DEFAULTS[k];
+  applyAll(); syncUI(); pushURL(); toast('Zurückgesetzt');
+}
+async function shareLink(){
+  const url = location.origin + location.pathname + '#c=' + encodeState();
+  try {
+    if (navigator.share) await navigator.share({ title:'Ferrari 812 GTS', url });
+    else { await navigator.clipboard.writeText(url); toast('Link kopiert'); }
+  } catch (e) { toast('Nicht geteilt'); }
+}
+function pushURL(){
+  try { history.replaceState(null, '', '#c=' + encodeState()); } catch (e) {}
+}
+
+function syncUI(){
+  const setSel = (sel, idx) => {
+    const n = document.querySelectorAll(sel);
+    n.forEach((c, j) => c.classList.toggle('on', j === idx));
+  };
+  const pages = pagesEl.children;
+  if (pages[0]){
+    setSel('#pages .page:nth-child(1) .grid .sw', S.paint);
+    const rows = pages[0].querySelectorAll('.chips');
+    rows[0] && [...rows[0].children].forEach((c, j) => c.classList.toggle('on', j === S.finish));
+    rows[1] && [...rows[1].children].forEach((c, j) => c.classList.toggle('on', j === S.trim));
+    if (uiRef.paintName) uiRef.paintName.textContent = PAINTS[S.paint][0];
+  }
+  if (pages[1]){
+    const rows = pages[1].querySelectorAll('.chips');
+    rows[0] && [...rows[0].children].forEach((c, j) => c.classList.toggle('on', j === S.rim));
+    setSel('#pages .page:nth-child(2) .grid .sw', S.calliper);
+    uiRef.ride && uiRef.ride._set(S.ride);
+    uiRef.steer && uiRef.steer._set(S.steer);
+  }
+  if (pages[2]){
+    setSel('#pages .page:nth-child(3) .grid .sw', S.leather);
+    uiRef.tint && uiRef.tint._set(S.tint);
+  }
+  if (pages[3]){
+    const rows = pages[3].querySelectorAll('.chips');
+    rows[0] && [...rows[0].children].forEach((c, j) => c.classList.toggle('on', j === S.env));
+    rows[1] && [...rows[1].children].forEach((c, j) => c.classList.toggle('on', j === S.light));
+    ['sun','lamp','rain','fog','reflect'].forEach(k => uiRef[k] && uiRef[k]._set(S[k]));
+  }
+  if (pages[4]){
+    ['explode','xray','aperture'].forEach(k => uiRef[k] && uiRef[k]._set(S[k]));
+  }
+}
+
+function syncButtons(){
+  const bt = document.getElementById('bTour');
+  if (bt) bt.classList.toggle('on', !!tour);
+  const bc = document.getElementById('bCmp');
+  if (bc) bc.classList.toggle('on', compareOn);
+  const bs = document.getElementById('bSpin');
+  if (bs) bs.classList.toggle('on', S.spin);
+}
+
+const toastEl = document.getElementById('toast');
+let toastT = null;
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => toastEl.classList.remove('on'), 2100);
+}
+
+const tipEl = document.getElementById('tip');
+let tipT = null;
+function showTip(title, desc){
+  tipEl.querySelector('.t').textContent = title;
+  tipEl.querySelector('.d').textContent = desc;
+  tipEl.classList.add('on');
+  clearTimeout(tipT);
+  tipT = setTimeout(() => tipEl.classList.remove('on'), 4600);
+}
+
+function syncViewButtons(){
+  const box = document.getElementById('views');
+  [...box.children].forEach((c, i) => c.classList.toggle('on', i === S.view));
+}
+function buildViewButtons(){
+  const box = document.getElementById('views');
+  box.innerHTML = '';
+  VIEWS.forEach((v, i) => {
+    const b = el('button', 'vbtn' + (i === 0 ? ' on' : ''), v[0]);
+    b.addEventListener('click', () => goView(i));
+    box.appendChild(b);
+  });
+}
+/* ================================================ Klappdach (prozedural)
+   Das Ausgangsmodell ist ein reines Offen-Modell: über den Sitzen endet die
+   Geometrie bei y = 0,85 (Sitzlehnen), ein Dach ist weder geschlossen noch
+   gefaltet vorhanden. Es wird deshalb aus den gemessenen Anschlusskanten
+   aufgebaut:
+     Scheibenoberkante  y 1,187  z -0,085  Halbbreite 0,531
+     Ueberrollbuegel    y 1,220  z -0,95   Halbbreite 0,630
+
+   Das Dach ist ZWEITEILIG wie das Original. Ein einteiliges Dach von 86 cm
+   Laenge schwenkt beim Kippen zwangslaeufig durch die Sitze — mit Faltung
+   halbiert sich der Hebelarm. Die Bahn unten ist durchgerechnet: über den
+   gesamten Ablauf dringt kein Punkt in den Kopfraum ein.                  */
+
+const ROOF_PIVOT = new THREE.Vector3(0, 1.205, -0.95);
+const ROOF_LEN = 0.865, ROOF_SPLIT = 0.5, ROOF_TH = 0.020;
+const NU = 26, NV = 20;
+
+/* geprüfte Bahnparameter */
+const FOLD_ANG = -2.75;     // vorderes Segment klappt nach oben aufs hintere
+const SWING_ANG = 3.00;     // Paket schwenkt nach hinten in den Kasten
+const SWING_LIFT = 0.30;    // Bogen nach oben
+const SWING_BACK = 0.34;    // Bogen nach hinten
+const LID_ANGLE = -0.45;
+
+/* Gruppe, die dem Wagen bei Drehteller und Höhenverstellung folgt */
+const carAttach = new THREE.Group();
+scene.add(carAttach);
+
+const roofPivot = new THREE.Group();
+roofPivot.position.copy(ROOF_PIVOT);
+carAttach.add(roofPivot);
+
+function roofHalfWidth(u){ return 0.630 - 0.099*u*u + 0.022*Math.sin(Math.PI*u); }
+function roofCrown(u){ return 0.015 + 0.055*Math.sin(Math.PI*Math.pow(u,0.92)) - 0.033*u*u; }
+function roofPoint(u, v, off){
+  return new THREE.Vector3(v * roofHalfWidth(u),
+                           roofCrown(u) - 0.052*v*v + off,
+                           u * ROOF_LEN);
+}
+const ROOF_HINGE = new THREE.Vector3(0, roofCrown(ROOF_SPLIT) + 0.008, ROOF_SPLIT * ROOF_LEN);
+
+const foldPivot = new THREE.Group();
+foldPivot.position.copy(ROOF_HINGE);
+roofPivot.add(foldPivot);
+
+/* Schale eines Segments: Ober- und Unterseite plus umlaufender Rand */
+function roofSegment(u0, u1, origin){
+  const n = Math.max(6, Math.round(NU * (u1 - u0)));
+  const pos = [], idx = [];
+  for (const off of [0, -ROOF_TH]){
+    for (let i = 0; i <= n; i++){
+      for (let j = 0; j <= NV; j++){
+        const p = roofPoint(u0 + (u1 - u0) * i / n, (j / NV) * 2 - 1, off);
+        pos.push(p.x - origin.x, p.y - origin.y, p.z - origin.z);
+      }
+    }
+  }
+  const N = (n + 1) * (NV + 1);
+  for (let i = 0; i < n; i++) for (let j = 0; j < NV; j++){
+    const a = i*(NV+1)+j, b = a+1, c = a+NV+1, d = c+1;
+    idx.push(a, c, b, b, c, d);
+    const a2 = N+a, b2 = N+b, c2 = N+c, d2 = N+d;
+    idx.push(a2, b2, c2, b2, d2, c2);
+  }
+  for (let i = 0; i < n; i++){
+    for (const j of [0, NV]){
+      const t0 = i*(NV+1)+j, t1 = (i+1)*(NV+1)+j;
+      if (j === 0) idx.push(t0, t1, N+t0, t1, N+t1, N+t0);
+      else         idx.push(t0, N+t0, t1, t1, N+t0, N+t1);
+    }
+  }
+  for (let j = 0; j < NV; j++){
+    const f0 = n*(NV+1)+j, f1 = f0+1;
+    idx.push(f0, f1, N+f0, f1, N+f1, N+f0);
+    idx.push(j, N+j, j+1, j+1, N+j, N+j+1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+let roofRear = null, roofFront = null, roofSeal = null;
+
+function buildRoof(){
+  roofRear = new THREE.Mesh(roofSegment(0, ROOF_SPLIT, new THREE.Vector3(0, 0, 0)), M.body);
+  roofRear.castShadow = roofRear.receiveShadow = true;
+  roofRear.userData.partName = 'roof';
+  roofPivot.add(roofRear);
+
+  roofFront = new THREE.Mesh(roofSegment(ROOF_SPLIT, 1, ROOF_HINGE), M.body);
+  roofFront.castShadow = roofFront.receiveShadow = true;
+  roofFront.userData.partName = 'roof';
+  foldPivot.add(roofFront);
+
+  /* Dichtleiste an der Vorderkante, kaschiert die Fuge zur Scheibe */
+  const sealPts = [];
+  for (let j = 0; j <= NV; j++){
+    sealPts.push(roofPoint(1, (j / NV) * 2 - 1, -0.009).sub(ROOF_HINGE));
+  }
+  roofSeal = new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(sealPts), NV * 2, 0.012, 8, false),
+    new THREE.MeshPhysicalMaterial({ color:0x0a0a0c, metalness:.1, roughness:.85 }));
+  roofSeal.userData.partName = 'roof';
+  foldPivot.add(roofSeal);
+
+  parts.roof = roofRear;
+  parts.roofFront = roofFront;
+  PARTINFO.roof = PARTINFO.roofFront = ['Klappdach',
+    'Zweiteiliges Hardtop. Es faltet sich zusammen und legt sich hinter den '
+    + 'Sitzen ab — beim Original in 14 Sekunden, bis 45 km/h auch während der Fahrt.'];
+  setRoof(S.roof, true);
+}
+
+/* ------------------------------------------------- Ablauf des Klappens
+   0,00–0,12  Verdeckkastendeckel hebt an
+   0,06–0,32  vorderes Segment faltet nach oben auf das hintere
+   0,34–0,86  Paket schwenkt über einen Bogen nach hinten in den Kasten
+   0,88–1,00  Deckel schließt                                             */
+let roofT = 0;
+function rseg(t, a, b){ return Math.max(0, Math.min(1, (t - a) / (b - a))); }
+function rsmooth(x){ return x * x * (3 - 2 * x); }
+
+function setRoof(open, instant){
+  S.roof = open ? 1 : 0;
+  if (instant){ roofT = S.roof; stepRoof(0); }
+}
+function stepRoof(dt){
+  const tgt = S.roof;
+  if (roofT !== tgt){
+    const step = dt / 4.4;                       // ganze Sequenz gut vier Sekunden
+    roofT += Math.sign(tgt - roofT) * Math.min(step, Math.abs(tgt - roofT));
+  }
+  const lid  = Math.max(rsmooth(rseg(roofT, 0, 0.12)), 1 - rsmooth(rseg(roofT, 0.88, 1)));
+  const fold = rsmooth(rseg(roofT, 0.06, 0.32));
+  const sw   = rsmooth(rseg(roofT, 0.34, 0.86));
+
+  if (groups.tonneauPivot) groups.tonneauPivot.rotation.x = LID_ANGLE * lid;
+  foldPivot.rotation.x = FOLD_ANG * fold;
+  roofPivot.rotation.x = SWING_ANG * sw;
+  roofPivot.position.set(
+    ROOF_PIVOT.x,
+    ROOF_PIVOT.y + SWING_LIFT * Math.sin(Math.PI * sw),
+    ROOF_PIVOT.z - SWING_BACK * Math.sin(Math.PI * sw));
+
+  /* im Kasten verschwinden lassen, bevor der Deckel schließt */
+  const vis = sw < 0.995;
+  if (roofRear) roofRear.visible = vis;
+  if (roofFront) roofFront.visible = vis;
+  if (roofSeal) roofSeal.visible = vis;
+}
+
+/* Gruppe dem Wagen nachführen */
+function syncAttach(){
+  if (!carRoot) return;
+  carAttach.rotation.y = carRoot.rotation.y;
+  carAttach.position.y = carRoot.position.y - (rootBaseY === null ? 0 : rootBaseY);
+  carAttach.visible = carRoot.visible;
+}
+/* ========================================================= Tiefenschärfe */
+let composer = null, bokeh = null;
+async function ensureComposer(){
+  if (composer) return composer;
+  const [{ EffectComposer }, { RenderPass }, { BokehPass }, { OutputPass }] = await Promise.all([
+    import('three/addons/postprocessing/EffectComposer.js'),
+    import('three/addons/postprocessing/RenderPass.js'),
+    import('three/addons/postprocessing/BokehPass.js'),
+    import('three/addons/postprocessing/OutputPass.js'),
+  ]);
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  bokeh = new BokehPass(scene, camera, { focus:8, aperture:0.0008, maxblur:0.012 });
+  composer.addPass(bokeh);
+  composer.addPass(new OutputPass());
+  composer.setSize(innerWidth, innerHeight);
+  return composer;
+}
+function applyDof(){
+  if (S.dof) ensureComposer().then(() => toast('Tiefenschärfe an'));
+  else if (bokeh) toast('Tiefenschärfe aus');
+}
+function updateDof(){
+  if (!bokeh) return;
+  const d = camera.position.distanceTo(controls.target);
+  bokeh.uniforms.focus.value = d;
+  bokeh.uniforms.aperture.value = 0.00004 + S.aperture * 0.0022;
+  bokeh.uniforms.maxblur.value = 0.004 + S.aperture * 0.016;
+}
+
+/* ------------------------------------------------------------ Spiegelung */
+const _mNormal = new THREE.Vector3(), _mPlanePos = new THREE.Vector3();
+const _mCamPos = new THREE.Vector3(), _mView = new THREE.Vector3();
+const _mLook = new THREE.Vector3(), _mTarget = new THREE.Vector3();
+const _mRot = new THREE.Matrix4();
+function renderMirror(){
+  if (S.reflect < 0.02 || V12.visible) return;
+  const w = Math.max(2, Math.floor(innerWidth * 0.55));
+  const h = Math.max(2, Math.floor(innerHeight * 0.55));
+  if (mirrorRT.width !== w || mirrorRT.height !== h) mirrorRT.setSize(w, h);
+
+  /* Spiegelkamera nach dem Verfahren von THREE.Reflector: Position und
+     Blickziel an der Ebene y=0 spiegeln, up mitspiegeln. So bleibt die
+     Orientierung eine echte Drehung und die Flächen werden nicht wegkulled. */
+  mirror.updateMatrixWorld();
+  camera.updateMatrixWorld();
+  _mNormal.set(0, 0, 1).applyMatrix4(_mRot.extractRotation(mirror.matrixWorld));
+  _mPlanePos.setFromMatrixPosition(mirror.matrixWorld);
+  _mCamPos.setFromMatrixPosition(camera.matrixWorld);
+
+  _mView.subVectors(_mPlanePos, _mCamPos).reflect(_mNormal).negate().add(_mPlanePos);
+  _mRot.extractRotation(camera.matrixWorld);
+  _mLook.set(0, 0, -1).applyMatrix4(_mRot).add(_mCamPos);
+  _mTarget.subVectors(_mPlanePos, _mLook).reflect(_mNormal).negate().add(_mPlanePos);
+
+  mirrorCam.position.copy(_mView);
+  mirrorCam.up.set(0, 1, 0).applyMatrix4(_mRot).reflect(_mNormal);
+  mirrorCam.lookAt(_mTarget);
+  mirrorCam.near = camera.near; mirrorCam.far = camera.far;
+  mirrorCam.updateMatrixWorld();
+  mirrorCam.projectionMatrix.copy(camera.projectionMatrix);
+
+  textureMatrix.set(0.5, 0, 0, 0.5,  0, 0.5, 0, 0.5,  0, 0, 0.5, 0.5,  0, 0, 0, 1);
+  textureMatrix.multiply(mirrorCam.projectionMatrix);
+  textureMatrix.multiply(mirrorCam.matrixWorldInverse);
+  textureMatrix.multiply(mirror.matrixWorld);
+
+  const vf = floor.visible, vm = mirror.visible, vc = contact.visible;
+  const vr = rain ? rain.visible : false;
+  floor.visible = mirror.visible = contact.visible = false;
+  if (rain) rain.visible = false;
+
+  const old = renderer.getRenderTarget();
+  renderer.setRenderTarget(mirrorRT);
+  renderer.clear();
+  renderer.render(scene, mirrorCam);
+  renderer.setRenderTarget(old);
+
+  floor.visible = vf; mirror.visible = vm; contact.visible = vc;
+  if (rain) rain.visible = vr;
+}
+
+/* ------------------------------------------------------ Vergleichsansicht */
+const splitEl = document.getElementById('split');
+function renderCompare(){
+  const w = renderer.domElement.width, h = renderer.domElement.height;
+  const half = Math.floor(w / 2);
+  const cur = snapConfig();
+  renderer.setScissorTest(true);
+  renderer.setScissor(0, 0, half, h);
+  renderer.setViewport(0, 0, w, h);
+  renderer.render(scene, camera);
+  pushConfig(compareB);
+  renderer.setScissor(half, 0, w - half, h);
+  renderer.render(scene, camera);
+  pushConfig(cur);
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, w, h);
+}
+
+/* ---------------------------------------------------------- Interaktion */
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let down = null;
+
+function pickAt(x, y){
+  ndc.x = (x / innerWidth) * 2 - 1;
+  ndc.y = -(y / innerHeight) * 2 + 1;
+  ray.setFromCamera(ndc, camera);
+  const list = Object.values(parts).filter(m => m.visible);
+  const hits = ray.intersectObjects(list, false);
+  return hits.length ? hits[0].object : null;
+}
+
+renderer.domElement.addEventListener('pointerdown', e => {
+  down = { x:e.clientX, y:e.clientY, t:performance.now() };
+});
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down) return;
+  const dx = e.clientX - down.x, dy = e.clientY - down.y;
+  const dt = performance.now() - down.t;
+  down = null;
+  if (dx*dx + dy*dy > 120 || dt > 500) return;      // war eine Drehbewegung
+  const o = pickAt(e.clientX, e.clientY);
+  if (!o) return;
+  const n = o.userData.partName;
+  if (n === 'doorLBody' || n === 'doorLInner' || n === 'doorLTrim' || n === 'doorLGlass' ||
+      n === 'doorRBody' || n === 'doorRInner' || n === 'doorRTrim' || n === 'doorRGlass'){
+    S.doors = S.doors ? 0 : 1;
+    if (uiRef.doorBtn) uiRef.doorBtn.classList.toggle('on', !!S.doors);
+    toast(S.doors ? 'Türen offen' : 'Türen zu');
+    return;
+  }
+  if (n === 'roof' || n === 'roofFront' || n === 'tonneau'){
+    setRoof(!S.roof);
+    if (uiRef.roofBtn) uiRef.roofBtn.classList.toggle('on', !S.roof);
+    toast(S.roof ? 'Verdeck öffnet' : 'Verdeck schließt');
+    return;
+  }
+  if (n === 'hood'){
+    S.hood = S.hood ? 0 : 1;
+    if (uiRef.hoodBtn) uiRef.hoodBtn.classList.toggle('on', !!S.hood);
+    toast(S.hood ? 'Haube offen' : 'Haube zu');
+    return;
+  }
+  const info = PARTINFO[n];
+  if (info) showTip(info[0], info[1]);
+});
+
+/* ------------------------------------------------------------- Kopfleiste */
+document.getElementById('bSpin').addEventListener('click', () => {
+  S.spin = !S.spin; syncButtons();
+});
+document.getElementById('bShot').addEventListener('click', shoot);
+const toggleSheet = () => document.body.classList.toggle('collapsed');
+document.getElementById('bSheet').addEventListener('click', toggleSheet);
+document.getElementById('grip').addEventListener('click', toggleSheet);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if (composer) composer.setSize(innerWidth, innerHeight);
+});
+
+/* ------------------------------------------------------------ Hauptschleife */
+const clock = new THREE.Clock();
+let turn = 0;
+
+function loop(){
+  requestAnimationFrame(loop);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  stepAnim(dt);
+  stepTour(dt);
+  applyDoors(dt);
+  syncAttach();
+  stepRoof(dt);
+
+  if (S.spin && !anim && carRoot){
+    turn += dt * 0.28;
+    carRoot.rotation.y = turn;
+  }
+  const speed = (S.spin ? 2.4 : 0) + S.rpm * 24;
+  if (speed > 0.001) stepWheels(dt, speed);
+
+  /* Studiolicht kreist */
+  lamp.position.set(Math.sin(S.lampAz) * 6, 5.2, Math.cos(S.lampAz) * 6);
+
+  stepRain(dt);
+  stepV12(dt, t);
+  audioStep(dt);
+  stepHotspots();
+
+  if (uiRef.tachBar){
+    const r = AUDIO.running ? AUDIO.rpm : 0;
+    uiRef.tachBar.style.width = (r / MAX_RPM * 100).toFixed(1) + '%';
+    uiRef.tachBar.style.background = AUDIO.limiterBlink > 0 ? '#ff3b2f' : '';
+    uiRef.tachNum.textContent = Math.round(r / 50) * 50 + ' /min';
+  }
+
+  controls.update();
+  renderMirror();
+
+  if (compareOn && compareB){
+    renderCompare();
+    splitEl.style.display = 'block';
+  } else {
+    splitEl.style.display = 'none';
+    if (S.dof && composer){ updateDof(); composer.render(); }
+    else renderer.render(scene, camera);
+  }
+}
+
+/* ------------------------------------------------------------------ Start */
+async function init(){
+  buildViewButtons();
+  buildHotspots();
+  if (location.hash.startsWith('#c=')) decodeState(location.hash.slice(3));
+
+  let buf;
+  try { buf = await fetchModel(); }
+  catch (e){
+    lderr.textContent = 'Modell konnte nicht geladen werden: ' + e.message
+      + ' — Datei ferrari_812_gts_v3_3a.glb im selben Ordner wie index_v3_3a.html prüfen.';
+    return;
+  }
+  const loader = new GLTFLoader();
+  loader.parse(buf, '', gltf => {
+    const root = gltf.scene;
+    root.traverse(o => {
+      if (o.isMesh){
+        o.castShadow = true; o.receiveShadow = true;
+        o.userData.partName = o.name;
+        parts[o.name] = o;
+      } else if (o.isObject3D && o.name){
+        groups[o.name] = o;
+      }
+    });
+    carRoot = groups['Ferrari_812_GTS'] || root;
+    scene.add(root);
+
+    buildMaterials();
+    buildRoof();
+    setupExplode();
+    buildUI();
+    applyAll();
+    syncUI();
+    goView(S.view, true);
+
+    document.getElementById('loader').classList.add('gone');
+    setTimeout(() => document.getElementById('loader').remove(), 700);
+    toast('Antippen erklärt Bauteile · Türen und Haube öffnen sich');
+  }, err => {
+    lderr.textContent = 'Modell fehlerhaft: ' + (err && err.message ? err.message : err);
+  });
+}
+
+init();
+loop();
+
+if ('serviceWorker' in navigator){
+  addEventListener('load', () => navigator.serviceWorker.register('sw_v3_3a.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
